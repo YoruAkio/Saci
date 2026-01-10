@@ -24,16 +24,11 @@ class SaciWindow: NSWindow {
     override var canBecomeMain: Bool { true }
 }
 
-// @note non-activating panel for launcher
+// @note non-activating panel for launcher (like Raycast/Alfred)
+// @note this panel does not steal focus from the previous app
 class SaciPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
-    
-    // @note handle ESC key to close panel
-    override func cancelOperation(_ sender: Any?) {
-        orderOut(nil)
-        NotificationCenter.default.post(name: .saciWindowDidHide, object: nil)
-    }
 }
 
 // @note app delegate to handle window configuration, hotkey and status bar
@@ -43,7 +38,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     var settingsWindow: NSWindow?
     var errorWindow: NSWindow?
     var statusItem: NSStatusItem?
-    var localKeyEventMonitor: Any?
     var localMouseEventMonitor: Any?
     var globalEventMonitor: Any?
     private var errorCancellable: AnyCancellable?
@@ -179,20 +173,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note setup local and global event monitors
     private func setupEventMonitors() {
-        // @note local monitor for ESC key
-        localKeyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self = self, let panel = self.mainPanel, panel.isVisible else {
-                return event
-            }
-            
-            if event.keyCode == 53 {
-                self.hidePanel()
-                return nil
-            }
-            
-            return event
-        }
-        
         // @note local monitor for clicks on other windows (like settings)
         localMouseEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self, let mainPanel = self.mainPanel, mainPanel.isVisible else {
@@ -397,13 +377,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         // @note notify that panel will show (for state reset)
         NotificationCenter.default.post(name: .saciWindowWillShow, object: nil)
         
-        // @note position panel in upper third of screen
+        // @note position panel in upper third of screen using initial height (search bar only)
+        // @note use fixed initial height to ensure consistent positioning
+        let initialHeight: CGFloat = 100
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
-            let panelFrame = panel.frame
-            let x = screenFrame.midX - panelFrame.width / 2
+            let panelWidth = panel.frame.width
+            let x = screenFrame.midX - panelWidth / 2
             let y = screenFrame.minY + screenFrame.height * 0.73
-            panel.setFrameOrigin(NSPoint(x: x, y: y))
+            panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: initialHeight), display: false)
         } else {
             panel.center()
         }
@@ -446,9 +428,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     func applicationWillTerminate(_ notification: Notification) {
         hotkeyManager.unregister()
         errorCancellable?.cancel()
-        if let monitor = localKeyEventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
         if let monitor = localMouseEventMonitor {
             NSEvent.removeMonitor(monitor)
         }

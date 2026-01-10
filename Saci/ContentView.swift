@@ -307,11 +307,12 @@ struct ContentView: View {
                 return
             }
             
-            // @note clear calculator result if search text is empty
+            // @note clear results and calculator if search text is empty
             if newValue.isEmpty {
                 calculatorResult = nil
                 selectedIndex = 0
                 showCopiedFeedback = false
+                searchService.clearResults()
             } else {
                 searchService.search(query: newValue)
                 // @note evaluate calculator expression
@@ -329,12 +330,12 @@ struct ContentView: View {
             showCopiedFeedback = false
         }
         .onReceive(NotificationCenter.default.publisher(for: .saciWindowWillShow)) { _ in
-            // @note ensure clean state when window appears
-            if searchText.isEmpty {
-                calculatorResult = nil
-                selectedIndex = 0
-                showCopiedFeedback = false
-            }
+            // @note reset all state when window appears
+            searchText = ""
+            calculatorResult = nil
+            selectedIndex = 0
+            showCopiedFeedback = false
+            searchService.clearResults()
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(settings: settings)
@@ -609,8 +610,14 @@ class SaciTextField: NSTextField {
         22: 6, 26: 7, 28: 8, 25: 9
     ]
     
-    // @note handle Cmd+number shortcuts before they reach the system
+    // @note handle key shortcuts before they reach the system
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // @note handle ESC key
+        if event.keyCode == 53 {
+            onEscape?()
+            return true
+        }
+        
         if event.modifierFlags.contains(.command) {
             // @note handle Cmd+, for settings
             if event.charactersIgnoringModifiers == "," {

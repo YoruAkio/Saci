@@ -260,6 +260,11 @@ class AppSearchService: ObservableObject {
         }
     }
     
+    // @note clear search results
+    func clearResults() {
+        results = []
+    }
+    
     // @note force refresh app list and rebuild cache
     func refresh() {
         fullScan()
