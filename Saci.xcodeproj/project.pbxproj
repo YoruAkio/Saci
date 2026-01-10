@@ -21,6 +21,8 @@
 		66E08C172F119A000078F2AC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C092F119A000078F2AC /* SettingsView.swift */; };
 		66E08C1B2F11A0000078F2AC /* ErrorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C1C2F11A0000078F2AC /* ErrorManager.swift */; };
 		66E08C1D2F11A0000078F2AC /* ErrorWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */; };
+		66E08C202F11B0000078F2AC /* CalculatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C212F11B0000078F2AC /* CalculatorService.swift */; };
+		66E08C222F11B0000078F2AC /* CalculatorResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C232F11B0000078F2AC /* CalculatorResultView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +42,8 @@
 		66E08C0D2F119A000078F2AC /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		66E08C1C2F11A0000078F2AC /* ErrorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorManager.swift; sourceTree = "<group>"; };
 		66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorWindowView.swift; sourceTree = "<group>"; };
+		66E08C212F11B0000078F2AC /* CalculatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorService.swift; sourceTree = "<group>"; };
+		66E08C232F11B0000078F2AC /* CalculatorResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorResultView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +104,7 @@
 				66E08C082F119A000078F2AC /* ResultsListView.swift */,
 				66E08C092F119A000078F2AC /* SettingsView.swift */,
 				66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */,
+				66E08C232F11B0000078F2AC /* CalculatorResultView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -119,6 +124,7 @@
 				66E08C0C2F119A000078F2AC /* AppSearchService.swift */,
 				66E08C0D2F119A000078F2AC /* HotkeyManager.swift */,
 				66E08C1C2F11A0000078F2AC /* ErrorManager.swift */,
+				66E08C212F11B0000078F2AC /* CalculatorService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -205,6 +211,8 @@
 				66E08C172F119A000078F2AC /* SettingsView.swift in Sources */,
 				66E08C1B2F11A0000078F2AC /* ErrorManager.swift in Sources */,
 				66E08C1D2F11A0000078F2AC /* ErrorWindowView.swift in Sources */,
+				66E08C202F11B0000078F2AC /* CalculatorService.swift in Sources */,
+				66E08C222F11B0000078F2AC /* CalculatorResultView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,7 +356,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.10-alpha;
+				MARKETING_VERSION = 0.4.0-alpha;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yoruakio.Saci;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -375,7 +383,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.10-alpha;
+				MARKETING_VERSION = 0.4.0-alpha;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yoruakio.Saci;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

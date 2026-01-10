@@ -24,10 +24,22 @@ class SaciWindow: NSWindow {
     override var canBecomeMain: Bool { true }
 }
 
+// @note non-activating panel for launcher
+class SaciPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+    
+    // @note handle ESC key to close panel
+    override func cancelOperation(_ sender: Any?) {
+        orderOut(nil)
+        NotificationCenter.default.post(name: .saciWindowDidHide, object: nil)
+    }
+}
+
 // @note app delegate to handle window configuration, hotkey and status bar
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     var hotkeyManager = HotkeyManager.shared
-    var mainWindow: SaciWindow?
+    var mainPanel: SaciPanel?
     var settingsWindow: NSWindow?
     var errorWindow: NSWindow?
     var statusItem: NSStatusItem?
@@ -76,8 +88,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         // @note setup status bar icon
         setupStatusBar()
         
-        // @note create main window but don't show it
-        createMainWindow()
+        // @note create main panel but don't show it
+        createMainPanel()
         
         // @note setup event monitors
         setupEventMonitors()
@@ -87,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         
         // @note register global hotkey
         hotkeyManager.onHotkeyPressed = { [weak self] in
-            self?.toggleWindow()
+            self?.togglePanel()
         }
         hotkeyManager.register()
         
@@ -169,12 +181,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     private func setupEventMonitors() {
         // @note local monitor for ESC key
         localKeyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self = self, let window = self.mainWindow, window.isVisible else {
+            guard let self = self, let panel = self.mainPanel, panel.isVisible else {
                 return event
             }
             
             if event.keyCode == 53 {
-                self.hideWindow()
+                self.hidePanel()
                 return nil
             }
             
@@ -183,13 +195,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         
         // @note local monitor for clicks on other windows (like settings)
         localMouseEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self = self, let mainWindow = self.mainWindow, mainWindow.isVisible else {
+            guard let self = self, let mainPanel = self.mainPanel, mainPanel.isVisible else {
                 return event
             }
             
-            // @note check if click is outside main window
-            if event.window != mainWindow {
-                self.hideWindow()
+            // @note check if click is outside main panel
+            if event.window != mainPanel {
+                self.hidePanel()
             }
             
             return event
@@ -197,11 +209,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         
         // @note global monitor for clicks outside the app
         globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self = self, let window = self.mainWindow, window.isVisible else {
+            guard let self = self, let panel = self.mainPanel, panel.isVisible else {
                 return
             }
             
-            self.hideWindow()
+            self.hidePanel()
         }
     }
     
@@ -273,10 +285,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         statusItem?.menu = menu
     }
     
-    // @note update menu item title based on window visibility
+    // @note update menu item title based on panel visibility
     func menuWillOpen(_ menu: NSMenu) {
         if let toggleItem = menu.items.first {
-            if mainWindow?.isVisible == true {
+            if mainPanel?.isVisible == true {
                 toggleItem.title = "Hide Saci"
             } else {
                 toggleItem.title = "Show Saci"
@@ -284,37 +296,41 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         }
     }
     
-    // @note create the main search window (called once at startup)
-    private func createMainWindow() {
+    // @note create the main search panel (called once at startup)
+    // @note uses NSPanel with nonactivatingPanel to avoid stealing focus
+    private func createMainPanel() {
         let contentView = ContentView(
             onEscape: { [weak self] in
-                self?.hideWindow()
+                self?.hidePanel()
             },
             onOpenSettings: { [weak self] in
                 self?.openSettings()
             }
         )
         
-        mainWindow = SaciWindow(
+        mainPanel = SaciPanel(
             contentRect: NSRect(x: 0, y: 0, width: 680, height: 100),
-            styleMask: [.borderless, .fullSizeContentView],
+            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         
-        guard let window = mainWindow else { return }
+        guard let panel = mainPanel else { return }
         
-        window.identifier = NSUserInterfaceItemIdentifier("main")
-        window.contentView = NSHostingView(rootView: contentView)
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isMovableByWindowBackground = false
-        window.isMovable = false
-        window.center()
+        panel.identifier = NSUserInterfaceItemIdentifier("main")
+        panel.contentView = NSHostingView(rootView: contentView)
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        panel.titlebarAppearsTransparent = true
+        panel.titleVisibility = .hidden
+        panel.isMovableByWindowBackground = false
+        panel.isMovable = false
+        panel.hidesOnDeactivate = false
+        panel.isFloatingPanel = true
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.center()
     }
     
     // @note open settings window
@@ -374,44 +390,46 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         }
     }
     
-    // @note show the main window and focus text field
-    private func showWindow() {
-        guard let window = mainWindow else { return }
+    // @note show the main panel without stealing focus from other apps
+    private func showPanel() {
+        guard let panel = mainPanel else { return }
         
-        // @note position window in upper third of screen
+        // @note notify that panel will show (for state reset)
+        NotificationCenter.default.post(name: .saciWindowWillShow, object: nil)
+        
+        // @note position panel in upper third of screen
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
-            let windowFrame = window.frame
-            let x = screenFrame.midX - windowFrame.width / 2
+            let panelFrame = panel.frame
+            let x = screenFrame.midX - panelFrame.width / 2
             let y = screenFrame.minY + screenFrame.height * 0.73
-            window.setFrameOrigin(NSPoint(x: x, y: y))
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
         } else {
-            window.center()
+            panel.center()
         }
         
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
     }
     
-    // @note hide the main window
-    private func hideWindow() {
-        mainWindow?.orderOut(nil)
+    // @note hide the main panel (focus automatically returns to previous app)
+    private func hidePanel() {
+        mainPanel?.orderOut(nil)
         NotificationCenter.default.post(name: .saciWindowDidHide, object: nil)
     }
     
     // @note toggle from menu item
     @objc private func toggleWindowFromMenu() {
-        toggleWindow()
+        togglePanel()
     }
     
-    // @note toggle main window visibility
-    private func toggleWindow() {
-        guard let window = mainWindow else { return }
+    // @note toggle main panel visibility
+    private func togglePanel() {
+        guard let panel = mainPanel else { return }
         
-        if window.isVisible {
-            hideWindow()
+        if panel.isVisible {
+            hidePanel()
         } else {
-            showWindow()
+            showPanel()
         }
     }
     
@@ -441,8 +459,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     }
 }
 
-// @note notification name for window hide event
+// @note notification names for window events
 extension Notification.Name {
     static let saciWindowDidHide = Notification.Name("saciWindowDidHide")
+    static let saciWindowWillShow = Notification.Name("saciWindowWillShow")
     static let dockIconSettingDidChange = Notification.Name("dockIconSettingDidChange")
 }

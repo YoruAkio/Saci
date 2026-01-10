@@ -102,6 +102,7 @@ struct FooterMenuButton: View {
 struct SearchFooterView: View {
     var onSettings: () -> Void
     var enableTransparency: Bool
+    var actionText: String = "Open Application"
     @Environment(\.colorScheme) var colorScheme
     
     // @note semi-transparent overlay color above the blur
@@ -124,9 +125,9 @@ struct SearchFooterView: View {
             
             Spacer()
             
-            // @note open application hint
+            // @note action hint
             HStack(spacing: 6) {
-                Text("Open Application")
+                Text(actionText)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 
@@ -153,6 +154,8 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var selectedIndex = 0
     @State private var showSettings = false
+    @State private var calculatorResult: CalculatorResult?
+    @State private var showCopiedFeedback = false
     @Environment(\.colorScheme) var colorScheme
     
     var onEscape: (() -> Void)?
@@ -163,9 +166,29 @@ struct ContentView: View {
         self.onOpenSettings = onOpenSettings
     }
     
-    // @note check if footer should be visible (only when results exist)
+    // @note check if calculator result is selected (index -1 means calculator)
+    private var isCalculatorSelected: Bool {
+        calculatorResult != nil && selectedIndex == -1
+    }
+    
+    // @note check if footer should be visible
     private var showFooter: Bool {
-        !searchService.results.isEmpty
+        !searchService.results.isEmpty || calculatorResult != nil
+    }
+    
+    // @note total selectable items (calculator + app results)
+    private var totalSelectableItems: Int {
+        let calcCount = calculatorResult != nil ? 1 : 0
+        let appCount = min(searchService.results.count, settings.maxResults)
+        return calcCount + appCount
+    }
+    
+    // @note footer action text based on selection
+    private var footerActionText: String {
+        if isCalculatorSelected {
+            return "Copy Result"
+        }
+        return "Open Application"
     }
     
     // @note background color based on theme (used when transparency disabled)
@@ -199,7 +222,7 @@ struct ContentView: View {
                     moveSelection(by: 1)
                 },
                 onSubmit: {
-                    launchSelectedApp()
+                    handleSubmit()
                 },
                 onCommandComma: {
                     openSettings()
@@ -210,16 +233,37 @@ struct ContentView: View {
             )
             
             // @note divider
-            if !searchService.results.isEmpty {
+            if !searchService.results.isEmpty || calculatorResult != nil {
                 Rectangle()
                     .fill(dividerColor)
                     .frame(height: 1)
             }
             
-            // @note results list
+            // @note calculator result (shown above app results)
+            if let calcResult = calculatorResult {
+                CalculatorResultContainer(
+                    result: calcResult,
+                    isSelected: isCalculatorSelected,
+                    showCopied: showCopiedFeedback,
+                    onCopy: copyCalculatorResult
+                )
+                
+                // @note divider between calculator and app results
+                if !searchService.results.isEmpty {
+                    Rectangle()
+                        .fill(dividerColor)
+                        .frame(height: 1)
+                        .padding(.horizontal, 16)
+                }
+            }
+            
+            // @note results list (app results start at index 0 if no calc, or after calc)
             ResultsListView(
                 results: searchService.results,
-                selectedIndex: $selectedIndex,
+                selectedIndex: Binding(
+                    get: { calculatorResult != nil ? selectedIndex : selectedIndex },
+                    set: { selectedIndex = $0 }
+                ),
                 onSelect: { result in
                     searchService.launchApp(at: result.path)
                     hideWindow()
@@ -233,7 +277,11 @@ struct ContentView: View {
                     .fill(dividerColor)
                     .frame(height: 1)
                 
-                SearchFooterView(onSettings: openSettings, enableTransparency: settings.enableTransparency)
+                SearchFooterView(
+                    onSettings: openSettings,
+                    enableTransparency: settings.enableTransparency,
+                    actionText: footerActionText
+                )
             }
         }
         .frame(width: 680)
@@ -252,40 +300,90 @@ struct ContentView: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
         .onChange(of: searchText) { newValue in
-            searchService.search(query: newValue)
-            selectedIndex = 0
+            // @note limit input length to prevent performance issues
+            let maxInputLength = 100
+            if newValue.count > maxInputLength {
+                searchText = String(newValue.prefix(maxInputLength))
+                return
+            }
+            
+            // @note clear calculator result if search text is empty
+            if newValue.isEmpty {
+                calculatorResult = nil
+                selectedIndex = 0
+                showCopiedFeedback = false
+            } else {
+                searchService.search(query: newValue)
+                // @note evaluate calculator expression
+                calculatorResult = CalculatorService.shared.evaluate(newValue)
+                // @note reset selection: -1 if calculator result exists, 0 otherwise
+                selectedIndex = calculatorResult != nil ? -1 : 0
+                showCopiedFeedback = false
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .saciWindowDidHide)) { _ in
             // @note clear search when window is hidden
             searchText = ""
             selectedIndex = 0
+            calculatorResult = nil
+            showCopiedFeedback = false
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .saciWindowWillShow)) { _ in
+            // @note ensure clean state when window appears
+            if searchText.isEmpty {
+                calculatorResult = nil
+                selectedIndex = 0
+                showCopiedFeedback = false
+            }
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(settings: settings)
         }
     }
     
-    // @note get valid max index for current results
+    // @note get valid max index for current results (considering calculator)
     private var validMaxIndex: Int {
-        min(searchService.results.count, settings.maxResults) - 1
+        let appMaxIndex = min(searchService.results.count, settings.maxResults) - 1
+        return appMaxIndex
     }
     
-    // @note check if index is valid for current results
+    // @note get minimum selection index (-1 if calculator exists, 0 otherwise)
+    private var minSelectionIndex: Int {
+        calculatorResult != nil ? -1 : 0
+    }
+    
+    // @note check if index is valid for current app results
     // @param index index to validate
-    private func isValidIndex(_ index: Int) -> Bool {
+    private func isValidAppIndex(_ index: Int) -> Bool {
         !searchService.results.isEmpty && index >= 0 && index <= validMaxIndex
     }
     
     // @note move selection up or down
     // @param delta direction to move (-1 up, 1 down)
     private func moveSelection(by delta: Int) {
-        guard !searchService.results.isEmpty else { return }
-        selectedIndex = max(0, min(validMaxIndex, selectedIndex + delta))
+        let hasCalc = calculatorResult != nil
+        let hasApps = !searchService.results.isEmpty
+        
+        guard hasCalc || hasApps else { return }
+        
+        let minIndex = hasCalc ? -1 : 0
+        let maxIndex = hasApps ? validMaxIndex : -1
+        
+        selectedIndex = max(minIndex, min(maxIndex, selectedIndex + delta))
+    }
+    
+    // @note handle submit action (copy calc or launch app)
+    private func handleSubmit() {
+        if isCalculatorSelected {
+            copyCalculatorResult()
+        } else {
+            launchSelectedApp()
+        }
     }
     
     // @note launch the currently selected app
     private func launchSelectedApp() {
-        guard isValidIndex(selectedIndex) else { return }
+        guard isValidAppIndex(selectedIndex) else { return }
         let result = searchService.results[selectedIndex]
         searchService.launchApp(at: result.path)
         hideWindow()
@@ -294,16 +392,37 @@ struct ContentView: View {
     // @note launch app at specific index (modifier+number shortcut)
     // @param index 0-based index of the app in results
     private func launchAppAtIndex(_ index: Int) {
-        guard isValidIndex(index) else { return }
+        guard isValidAppIndex(index) else { return }
         let result = searchService.results[index]
         searchService.launchApp(at: result.path)
         hideWindow()
+    }
+    
+    // @note copy calculator result to clipboard
+    private func copyCalculatorResult() {
+        guard let calcResult = calculatorResult else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(calcResult.copyValue, forType: .string)
+        
+        // @note show feedback
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showCopiedFeedback = true
+        }
+        
+        // @note hide feedback after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showCopiedFeedback = false
+            }
+        }
     }
     
     // @note hide the main window
     private func hideWindow() {
         searchText = ""
         selectedIndex = 0
+        calculatorResult = nil
+        showCopiedFeedback = false
         onEscape?()
     }
     
