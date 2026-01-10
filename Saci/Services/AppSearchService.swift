@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Combine
 
 // @note service to search installed applications with persistent cache
 class AppSearchService: ObservableObject {
@@ -16,6 +17,13 @@ class AppSearchService: ObservableObject {
     
     // @note serial queue for thread-safe access to allApps
     private let appsQueue = DispatchQueue(label: "com.saci.appsQueue")
+    
+    // @note background queue for search operations
+    private let searchQueue = DispatchQueue(label: "com.saci.searchQueue", qos: .userInitiated)
+    
+    // @note debounce search to avoid excessive filtering
+    private var searchWorkItem: DispatchWorkItem?
+    private let searchDebounceMs: Int = 50
     
     // @note search paths for applications
     private let searchPaths = [
@@ -184,21 +192,38 @@ class AppSearchService: ObservableObject {
         return apps
     }
     
-    // @note filter apps based on search query
+    // @note filter apps based on search query with debounce
     // @param query search text to filter
     func search(query: String) {
+        // @note cancel previous search
+        searchWorkItem?.cancel()
+        
         if query.isEmpty {
             results = []
             return
         }
         
-        let lowercasedQuery = query.lowercased()
-        
-        // @note thread-safe read of allApps
-        let apps = appsQueue.sync { allApps }
-        results = apps.filter { app in
-            app.name.lowercased().contains(lowercasedQuery)
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            
+            let lowercasedQuery = query.lowercased()
+            
+            // @note thread-safe read of allApps
+            let apps = self.appsQueue.sync { self.allApps }
+            
+            // @note filter on background queue
+            let filtered = apps.filter { app in
+                app.name.lowercased().contains(lowercasedQuery)
+            }
+            
+            // @note update results on main thread
+            DispatchQueue.main.async { [weak self] in
+                self?.results = filtered
+            }
         }
+        
+        searchWorkItem = workItem
+        searchQueue.asyncAfter(deadline: .now() + .milliseconds(searchDebounceMs), execute: workItem)
     }
     
     // @note launch app at given path
