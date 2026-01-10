@@ -14,6 +14,9 @@ class AppSearchService: ObservableObject {
     private let fileManager = FileManager.default
     private let cacheFileName = "app_cache.json"
     
+    // @note serial queue for thread-safe access to allApps
+    private let appsQueue = DispatchQueue(label: "com.saci.appsQueue")
+    
     // @note search paths for applications
     private let searchPaths = [
         "/Applications",
@@ -47,7 +50,9 @@ class AppSearchService: ObservableObject {
         
         // @note try to load from cache first for instant results
         if let cachedApps = loadFromCache() {
-            allApps = cachedApps
+            appsQueue.sync {
+                allApps = cachedApps
+            }
             isLoading = false
             
             // @note update cache in background
@@ -94,7 +99,11 @@ class AppSearchService: ObservableObject {
             guard let self = self else { return }
             
             let scannedApps = self.scanAllApps()
-            let currentPaths = Set(self.allApps.map { $0.path })
+            
+            // @note thread-safe read of current paths
+            let currentPaths = self.appsQueue.sync {
+                Set(self.allApps.map { $0.path })
+            }
             let scannedPaths = Set(scannedApps.map { $0.path })
             
             // @note find new apps
@@ -107,13 +116,16 @@ class AppSearchService: ObservableObject {
                 let newApps = scannedApps.filter { newPaths.contains($0.path) }
                     .map { $0.toSearchResult() }
                 
+                // @note thread-safe update of allApps on main thread
                 DispatchQueue.main.async {
-                    // @note remove deleted apps
-                    self.allApps.removeAll { removedPaths.contains($0.path) }
-                    // @note add new apps
-                    self.allApps.append(contentsOf: newApps)
-                    // @note sort
-                    self.allApps.sort { $0.name.lowercased() < $1.name.lowercased() }
+                    self.appsQueue.sync {
+                        // @note remove deleted apps
+                        self.allApps.removeAll { removedPaths.contains($0.path) }
+                        // @note add new apps
+                        self.allApps.append(contentsOf: newApps)
+                        // @note sort
+                        self.allApps.sort { $0.name.lowercased() < $1.name.lowercased() }
+                    }
                 }
                 
                 // @note save updated cache
@@ -135,7 +147,9 @@ class AppSearchService: ObservableObject {
             self.saveToCache(scannedApps)
             
             DispatchQueue.main.async {
-                self.allApps = searchResults
+                self.appsQueue.sync {
+                    self.allApps = searchResults
+                }
                 self.isLoading = false
             }
         }
@@ -180,7 +194,10 @@ class AppSearchService: ObservableObject {
         }
         
         let lowercasedQuery = query.lowercased()
-        results = allApps.filter { app in
+        
+        // @note thread-safe read of allApps
+        let apps = appsQueue.sync { allApps }
+        results = apps.filter { app in
             app.name.lowercased().contains(lowercasedQuery)
         }
     }
