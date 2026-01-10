@@ -68,7 +68,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // @note apply saved theme on launch
-        applyTheme()
+        AppSettings.shared.applyTheme()
         
         // @note sync launch at login state
         AppSettings.shared.syncLaunchAtLogin()
@@ -116,24 +116,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         )
     }
     
-    // @note apply theme from settings
-    private func applyTheme() {
-        let settings = AppSettings.shared
-        switch settings.appTheme {
-        case .system:
-            NSApp.appearance = nil
-        case .dark:
-            NSApp.appearance = NSAppearance(named: .darkAqua)
-        case .light:
-            NSApp.appearance = NSAppearance(named: .aqua)
-        }
-    }
-    
     // @note handle theme change notification
     @objc private func themeDidChange() {
-        applyTheme()
+        // @note theme is already applied via AppSettings.applyTheme()
         // @note SwiftUI views update automatically via @Environment(\.colorScheme)
-        // @note no need to recreate window
     }
     
     // @note handle dock icon setting change
@@ -148,11 +134,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         updateSettingsWindowTransparency()
     }
     
-    // @note update settings window transparency based on setting
-    private func updateSettingsWindowTransparency() {
-        guard let window = settingsWindow else { return }
+    // @note apply transparency setting to a window
+    // @param window the window to update
+    private func applyWindowTransparency(to window: NSWindow) {
         let settings = AppSettings.shared
-        
         if settings.enableTransparency {
             window.isOpaque = false
             window.backgroundColor = .clear
@@ -160,6 +145,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             window.isOpaque = true
             window.backgroundColor = .windowBackgroundColor
         }
+    }
+    
+    // @note update settings window transparency based on setting
+    private func updateSettingsWindowTransparency() {
+        guard let window = settingsWindow else { return }
+        applyWindowTransparency(to: window)
     }
     
     // @note update dock icon based on settings and window state
@@ -354,14 +345,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         
         guard let window = settingsWindow else { return }
         
-        // @note apply transparency based on setting
-        if settings.enableTransparency {
-            window.isOpaque = false
-            window.backgroundColor = .clear
-        } else {
-            window.isOpaque = true
-            window.backgroundColor = .windowBackgroundColor
-        }
+        applyWindowTransparency(to: window)
         
         window.contentView = NSHostingView(rootView: settingsView)
         window.center()

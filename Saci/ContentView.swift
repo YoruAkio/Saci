@@ -265,21 +265,27 @@ struct ContentView: View {
         }
     }
     
+    // @note get valid max index for current results
+    private var validMaxIndex: Int {
+        min(searchService.results.count, settings.maxResults) - 1
+    }
+    
+    // @note check if index is valid for current results
+    // @param index index to validate
+    private func isValidIndex(_ index: Int) -> Bool {
+        !searchService.results.isEmpty && index >= 0 && index <= validMaxIndex
+    }
+    
     // @note move selection up or down
     // @param delta direction to move (-1 up, 1 down)
     private func moveSelection(by delta: Int) {
         guard !searchService.results.isEmpty else { return }
-        
-        let maxIndex = min(searchService.results.count, settings.maxResults) - 1
-        selectedIndex = max(0, min(maxIndex, selectedIndex + delta))
+        selectedIndex = max(0, min(validMaxIndex, selectedIndex + delta))
     }
     
     // @note launch the currently selected app
     private func launchSelectedApp() {
-        guard !searchService.results.isEmpty else { return }
-        let maxIndex = min(searchService.results.count, settings.maxResults) - 1
-        guard selectedIndex >= 0 && selectedIndex <= maxIndex else { return }
-        
+        guard isValidIndex(selectedIndex) else { return }
         let result = searchService.results[selectedIndex]
         searchService.launchApp(at: result.path)
         hideWindow()
@@ -288,10 +294,7 @@ struct ContentView: View {
     // @note launch app at specific index (modifier+number shortcut)
     // @param index 0-based index of the app in results
     private func launchAppAtIndex(_ index: Int) {
-        guard !searchService.results.isEmpty else { return }
-        let maxIndex = min(searchService.results.count, settings.maxResults) - 1
-        guard index >= 0 && index <= maxIndex else { return }
-        
+        guard isValidIndex(index) else { return }
         let result = searchService.results[index]
         searchService.launchApp(at: result.path)
         hideWindow()

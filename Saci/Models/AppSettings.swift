@@ -106,8 +106,8 @@ class AppSettings: ObservableObject {
         }
     }
     
-    // @note apply theme to all windows
-    private func applyTheme() {
+    // @note apply theme to app appearance
+    func applyTheme() {
         NotificationCenter.default.post(name: .themeDidChange, object: nil)
         
         // @note set app appearance based on theme
