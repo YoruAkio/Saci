@@ -249,9 +249,9 @@ struct ContentView: View {
     // @note move selection up or down
     // @param delta direction to move (-1 up, 1 down)
     private func moveSelection(by delta: Int) {
-        let maxIndex = min(searchService.results.count, settings.maxResults) - 1
-        if maxIndex < 0 { return }
+        guard !searchService.results.isEmpty else { return }
         
+        let maxIndex = min(searchService.results.count, settings.maxResults) - 1
         selectedIndex = max(0, min(maxIndex, selectedIndex + delta))
     }
     
@@ -411,6 +411,14 @@ struct SearchTextField: NSViewRepresentable {
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 parent.onSubmit()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveUp(_:)) {
+                parent.onArrowUp()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveDown(_:)) {
+                parent.onArrowDown()
                 return true
             }
             return false
