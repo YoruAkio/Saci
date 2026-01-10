@@ -28,6 +28,108 @@ struct VisualEffectBackground: NSViewRepresentable {
     }
 }
 
+// @note footer menu button with popup
+struct FooterMenuButton: View {
+    @State private var showMenu = false
+    var onSettings: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+    
+    private var menuBackgroundColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.15, alpha: 1))
+            : Color(nsColor: NSColor(white: 0.92, alpha: 1))
+    }
+    
+    var body: some View {
+        Button(action: { showMenu.toggle() }) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .frame(width: 24, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.secondary.opacity(0.15))
+                )
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showMenu, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                // @note version header
+                Text("Saci v0.1.0-alpha")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                
+                Divider()
+                
+                // @note settings button
+                Button(action: {
+                    showMenu = false
+                    onSettings()
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 13))
+                            .frame(width: 18)
+                        
+                        Text("Settings")
+                            .font(.system(size: 13))
+                        
+                        Spacer()
+                        
+                        Text("⌘ ,")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(Color.clear)
+                .onHover { hovering in
+                    // @note handled by system
+                }
+            }
+            .frame(width: 200)
+            .background(menuBackgroundColor)
+        }
+    }
+}
+
+// @note search window footer bar
+struct SearchFooterView: View {
+    var onSettings: () -> Void
+    var enableTransparency: Bool
+    @Environment(\.colorScheme) var colorScheme
+    
+    // @note semi-transparent overlay color above the blur
+    private var footerOverlayColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.08, alpha: 0.6))
+            : Color(nsColor: NSColor(white: 0.85, alpha: 0.6))
+    }
+    
+    // @note solid background when transparency disabled
+    private var footerSolidColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.1, alpha: 1))
+            : Color(nsColor: NSColor(white: 0.88, alpha: 1))
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            FooterMenuButton(onSettings: onSettings)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(enableTransparency ? footerOverlayColor : footerSolidColor)
+    }
+}
+
 // @note main search window UI
 struct ContentView: View {
     @StateObject private var searchService = AppSearchService()
@@ -38,9 +140,16 @@ struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
     
     var onEscape: (() -> Void)?
+    var onOpenSettings: (() -> Void)?
     
-    init(onEscape: (() -> Void)? = nil) {
+    init(onEscape: (() -> Void)? = nil, onOpenSettings: (() -> Void)? = nil) {
         self.onEscape = onEscape
+        self.onOpenSettings = onOpenSettings
+    }
+    
+    // @note check if footer should be visible (only when results exist)
+    private var showFooter: Bool {
+        !searchService.results.isEmpty
     }
     
     // @note background color based on theme (used when transparency disabled)
@@ -77,7 +186,7 @@ struct ContentView: View {
                     launchSelectedApp()
                 },
                 onCommandComma: {
-                    showSettings = true
+                    openSettings()
                 }
             )
             
@@ -98,6 +207,15 @@ struct ContentView: View {
                 },
                 maxResults: settings.maxResults
             )
+            
+            // @note footer (shown when typing or has results)
+            if showFooter {
+                Rectangle()
+                    .fill(dividerColor)
+                    .frame(height: 1)
+                
+                SearchFooterView(onSettings: openSettings, enableTransparency: settings.enableTransparency)
+            }
         }
         .frame(width: 680)
         .background {
@@ -153,6 +271,15 @@ struct ContentView: View {
         searchText = ""
         selectedIndex = 0
         onEscape?()
+    }
+    
+    // @note open settings
+    private func openSettings() {
+        if let onOpenSettings = onOpenSettings {
+            onOpenSettings()
+        } else {
+            showSettings = true
+        }
     }
 }
 

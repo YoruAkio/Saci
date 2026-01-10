@@ -228,9 +228,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note create the main search window (hidden by default)
     private func createMainWindow() {
-        let contentView = ContentView(onEscape: { [weak self] in
-            self?.hideWindow()
-        })
+        let contentView = ContentView(
+            onEscape: { [weak self] in
+                self?.hideWindow()
+            },
+            onOpenSettings: { [weak self] in
+                self?.openSettings()
+            }
+        )
         
         if mainWindow == nil {
             mainWindow = SaciWindow(
@@ -317,7 +322,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     // @note show the main window and focus text field
     private func showWindow() {
         guard let window = mainWindow else { return }
-        window.center()
+        
+        // @note position window in upper third of screen
+        if let screen = NSScreen.main {
+            let screenFrame = screen.visibleFrame
+            let windowFrame = window.frame
+            let x = screenFrame.midX - windowFrame.width / 2
+            let y = screenFrame.minY + screenFrame.height * 0.73
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else {
+            window.center()
+        }
+        
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
