@@ -12,6 +12,7 @@ class HotkeyManager: ObservableObject {
     
     private var eventHandler: EventHandlerRef?
     private var hotKeyRef: EventHotKeyRef?
+    private var retainedSelf: Unmanaged<HotkeyManager>?
     
     var onHotkeyPressed: (() -> Void)?
     
@@ -38,19 +39,25 @@ class HotkeyManager: ObservableObject {
         
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         
-        let handler: EventHandlerUPP = { _, event, userData -> OSStatus in
-            guard let userData = userData else { return OSStatus(eventNotHandledErr) }
-            let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-            
-            DispatchQueue.main.async {
-                manager.onHotkeyPressed?()
-            }
-            
-            return noErr
-        }
+        // @note retain self to prevent deallocation while handler is registered
+        retainedSelf = Unmanaged.passRetained(self)
+        let selfPtr = retainedSelf!.toOpaque()
         
-        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
-        InstallEventHandler(GetApplicationEventTarget(), handler, 1, &eventType, selfPtr, &eventHandler)
+        // @note install event handler
+        let status = InstallEventHandler(
+            GetApplicationEventTarget(),
+            hotkeyEventHandler,
+            1,
+            &eventType,
+            selfPtr,
+            &eventHandler
+        )
+        
+        guard status == noErr else {
+            retainedSelf?.release()
+            retainedSelf = nil
+            return
+        }
         
         // @note register hotkey with modifier from settings (keycode 49 = space)
         var hotKeyRefTemp: EventHotKeyRef?
@@ -69,10 +76,33 @@ class HotkeyManager: ObservableObject {
             RemoveEventHandler(eventHandler)
             self.eventHandler = nil
         }
+        
+        // @note release retained self after unregistering
+        retainedSelf?.release()
+        retainedSelf = nil
     }
     
     deinit {
         unregister()
         NotificationCenter.default.removeObserver(self)
     }
+}
+
+// @note global C function for hotkey event handler (required for Carbon API)
+private func hotkeyEventHandler(
+    nextHandler: EventHandlerCallRef?,
+    event: EventRef?,
+    userData: UnsafeMutableRawPointer?
+) -> OSStatus {
+    guard let userData = userData else {
+        return OSStatus(eventNotHandledErr)
+    }
+    
+    let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
+    
+    DispatchQueue.main.async {
+        manager.onHotkeyPressed?()
+    }
+    
+    return noErr
 }
