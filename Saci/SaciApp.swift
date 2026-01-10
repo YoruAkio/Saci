@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Combine
 
 @main
 struct SaciApp: App {
@@ -28,14 +29,41 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     var hotkeyManager = HotkeyManager.shared
     var mainWindow: SaciWindow?
     var settingsWindow: NSWindow?
+    var errorWindow: NSWindow?
     var statusItem: NSStatusItem?
     var localKeyEventMonitor: Any?
     var localMouseEventMonitor: Any?
     var globalEventMonitor: Any?
+    private var errorCancellable: AnyCancellable?
     
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // @note check if another instance is already running
+        if checkForExistingInstance() {
+            NSApp.terminate(nil)
+            return
+        }
+        
         // @note hide dock icon before anything else
         NSApp.setActivationPolicy(.accessory)
+    }
+    
+    // @note check if another Saci instance is running and activate it
+    // @return true if another instance exists
+    private func checkForExistingInstance() -> Bool {
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.yoruakio.Saci"
+        let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+        
+        // @note filter out current process
+        let otherInstances = runningApps.filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        
+        if let existingApp = otherInstances.first {
+            // @note activate the existing instance
+            existingApp.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            print("Saci is already running. Activating existing instance.")
+            return true
+        }
+        
+        return false
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -53,6 +81,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         
         // @note setup event monitors
         setupEventMonitors()
+        
+        // @note setup error window observer
+        setupErrorObserver()
         
         // @note register global hotkey
         hotkeyManager.onHotkeyPressed = { [weak self] in
@@ -183,6 +214,55 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         }
     }
     
+    // @note setup observer for error window display using Combine
+    private func setupErrorObserver() {
+        errorCancellable = ErrorManager.shared.$showErrorWindow
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] shouldShow in
+                if shouldShow {
+                    self?.showErrorWindow()
+                }
+            }
+        
+        // @note observe error window close notification
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(closeErrorWindow),
+            name: .errorWindowShouldClose,
+            object: nil
+        )
+    }
+    
+    // @note close error window when dismiss is called
+    @objc private func closeErrorWindow() {
+        errorWindow?.close()
+    }
+    
+    // @note show error window
+    private func showErrorWindow() {
+        let errorManager = ErrorManager.shared
+        guard errorManager.currentError != nil else { return }
+        
+        if errorWindow == nil {
+            errorWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 450, height: 280),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            errorWindow?.title = "Saci Error"
+            errorWindow?.isReleasedWhenClosed = false
+            errorWindow?.delegate = self
+        }
+        
+        guard let window = errorWindow else { return }
+        
+        window.contentView = NSHostingView(rootView: ErrorWindowView())
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
     // @note setup status bar item with menu
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -297,11 +377,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         settingsWindow?.close()
     }
     
-    // @note handle settings window close
+    // @note handle window close events
     func windowWillClose(_ notification: Notification) {
-        if notification.object as? NSWindow == settingsWindow {
+        guard let closingWindow = notification.object as? NSWindow else { return }
+        
+        if closingWindow == settingsWindow {
             // @note hide dock icon when settings closes
             updateDockIconVisibility()
+        } else if closingWindow == errorWindow {
+            // @note reset error manager state when error window closes
+            ErrorManager.shared.dismiss()
         }
     }
     
@@ -358,6 +443,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     func applicationWillTerminate(_ notification: Notification) {
         hotkeyManager.unregister()
+        errorCancellable?.cancel()
         if let monitor = localKeyEventMonitor {
             NSEvent.removeMonitor(monitor)
         }

@@ -93,8 +93,11 @@ class AppSearchService: ObservableObject {
         
         let cache = AppCache(apps: apps, lastUpdated: Date())
         
-        if let data = try? JSONEncoder().encode(cache) {
-            try? data.write(to: cacheURL)
+        do {
+            let data = try JSONEncoder().encode(cache)
+            try data.write(to: cacheURL)
+        } catch {
+            ErrorManager.shared.report(.cacheSaveFailed(underlyingError: error), showWindow: false)
         }
     }
     
@@ -248,7 +251,13 @@ class AppSearchService: ObservableObject {
     // @param path full path to the app bundle
     func launchApp(at path: String) {
         let url = URL(fileURLWithPath: path)
-        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        let config = NSWorkspace.OpenConfiguration()
+        
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, error in
+            if let error = error {
+                ErrorManager.shared.report(.appLaunchFailed(path: path, underlyingError: error))
+            }
+        }
     }
     
     // @note force refresh app list and rebuild cache

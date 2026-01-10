@@ -44,7 +44,7 @@ class HotkeyManager: ObservableObject {
         let selfPtr = retainedSelf!.toOpaque()
         
         // @note install event handler
-        let status = InstallEventHandler(
+        let handlerStatus = InstallEventHandler(
             GetApplicationEventTarget(),
             hotkeyEventHandler,
             1,
@@ -53,15 +53,36 @@ class HotkeyManager: ObservableObject {
             &eventHandler
         )
         
-        guard status == noErr else {
+        if handlerStatus != noErr {
             retainedSelf?.release()
             retainedSelf = nil
+            ErrorManager.shared.report(.hotkeyHandlerFailed(code: handlerStatus))
             return
         }
         
         // @note register hotkey with modifier from settings (keycode 49 = space)
         var hotKeyRefTemp: EventHotKeyRef?
-        RegisterEventHotKey(49, settings.hotkeyOption.modifierKey, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRefTemp)
+        let registerStatus = RegisterEventHotKey(
+            49,
+            settings.hotkeyOption.modifierKey,
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRefTemp
+        )
+        
+        if registerStatus != noErr {
+            // @note cleanup handler since hotkey failed
+            if let handler = eventHandler {
+                RemoveEventHandler(handler)
+                eventHandler = nil
+            }
+            retainedSelf?.release()
+            retainedSelf = nil
+            ErrorManager.shared.report(.hotkeyRegistrationFailed(code: registerStatus))
+            return
+        }
+        
         hotKeyRef = hotKeyRefTemp
     }
     
