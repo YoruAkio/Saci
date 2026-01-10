@@ -56,26 +56,6 @@ The built app will be in the `build/` directory.
 4. Press **Enter** to launch the selected app
 5. Press **Escape** to close
 
-### General
-
-- **Hotkey** - Choose between Option+Space, Cmd+Space, or Ctrl+Space
-- **Max Results** - Number of results to display (5, 8, 10, or 15)
-- **Launch at Login** - Start Saci automatically when you log in
-- **Show in Dock** - Show dock icon when settings window is open
-
-## Building
-
-```bash
-# Debug build
-xcodebuild -project Saci.xcodeproj -scheme Saci -configuration Debug build
-
-# Release build
-xcodebuild -project Saci.xcodeproj -scheme Saci -configuration Release build
-
-# Clean
-xcodebuild -project Saci.xcodeproj -scheme Saci clean
-```
-
 ## Contributing
 
 Contributions are welcome! Feel free to submit pull requests or open issues.
