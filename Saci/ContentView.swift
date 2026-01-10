@@ -123,6 +123,22 @@ struct SearchFooterView: View {
             FooterMenuButton(onSettings: onSettings)
             
             Spacer()
+            
+            // @note open application hint
+            HStack(spacing: 6) {
+                Text("Open Application")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                
+                Text("↵")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 22, height: 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.secondary.opacity(0.15))
+                    )
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -187,6 +203,9 @@ struct ContentView: View {
                 },
                 onCommandComma: {
                     openSettings()
+                },
+                onCommandNumber: { index in
+                    launchAppAtIndex(index)
                 }
             )
             
@@ -266,6 +285,18 @@ struct ContentView: View {
         hideWindow()
     }
     
+    // @note launch app at specific index (modifier+number shortcut)
+    // @param index 0-based index of the app in results
+    private func launchAppAtIndex(_ index: Int) {
+        guard !searchService.results.isEmpty else { return }
+        let maxIndex = min(searchService.results.count, settings.maxResults) - 1
+        guard index <= maxIndex else { return }
+        
+        let result = searchService.results[index]
+        searchService.launchApp(at: result.path)
+        hideWindow()
+    }
+    
     // @note hide the main window
     private func hideWindow() {
         searchText = ""
@@ -293,6 +324,7 @@ struct SearchTextField: NSViewRepresentable {
     var onArrowDown: () -> Void
     var onSubmit: () -> Void
     var onCommandComma: () -> Void
+    var onCommandNumber: (Int) -> Void
     
     func makeNSView(context: Context) -> NSView {
         let containerView = SaciSearchContainerView()
@@ -310,6 +342,7 @@ struct SearchTextField: NSViewRepresentable {
         textField.onArrowUp = onArrowUp
         textField.onArrowDown = onArrowDown
         textField.onCommandComma = onCommandComma
+        textField.onCommandNumber = onCommandNumber
         textField.stringValue = text
         textField.placeholderString = "Search..."
         textField.isBordered = false
@@ -372,6 +405,7 @@ struct SearchTextField: NSViewRepresentable {
             textField.onArrowUp = onArrowUp
             textField.onArrowDown = onArrowDown
             textField.onCommandComma = onCommandComma
+            textField.onCommandNumber = onCommandNumber
             textField.textColor = .labelColor
         }
         
@@ -445,14 +479,33 @@ class SaciTextField: NSTextField {
     var onArrowUp: (() -> Void)?
     var onArrowDown: (() -> Void)?
     var onCommandComma: (() -> Void)?
+    var onCommandNumber: ((Int) -> Void)?
+    
+    // @note number key codes (1-9)
+    private let numberKeyCodes: [UInt16: Int] = [
+        18: 1, 19: 2, 20: 3, 21: 4, 23: 5,
+        22: 6, 26: 7, 28: 8, 25: 9
+    ]
+    
+    // @note handle Cmd+number shortcuts before they reach the system
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.command) {
+            // @note handle Cmd+, for settings
+            if event.charactersIgnoringModifiers == "," {
+                onCommandComma?()
+                return true
+            }
+            
+            // @note handle Cmd+number (1-9) for quick app launch
+            if let number = numberKeyCodes[event.keyCode] {
+                onCommandNumber?(number - 1) // convert to 0-based index
+                return true
+            }
+        }
+        return super.performKeyEquivalent(with: event)
+    }
     
     override func keyDown(with event: NSEvent) {
-        // @note handle Cmd+,
-        if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "," {
-            onCommandComma?()
-            return
-        }
-        
         switch event.keyCode {
         case 53: // escape
             onEscape?()

@@ -9,6 +9,7 @@ import SwiftUI
 struct ResultRowView: View {
     let result: SearchResult
     let isSelected: Bool
+    let index: Int
     @Environment(\.colorScheme) var colorScheme
     
     // @note selection background color based on theme
@@ -44,11 +45,20 @@ struct ResultRowView: View {
             
             Spacer()
             
-            if isSelected {
-                Text("↵")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+            // @note keybind hint (⌘ + number)
+            HStack(spacing: 2) {
+                Text("⌘")
+                    .font(.system(size: 11, weight: .medium))
+                Text("\(index + 1)")
+                    .font(.system(size: 11, weight: .medium))
             }
+            .foregroundColor(.secondary)
+            .frame(minWidth: 28, minHeight: 20)
+            .padding(.horizontal, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.secondary.opacity(0.15))
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

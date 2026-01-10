@@ -44,6 +44,24 @@ enum HotkeyOption: String, CaseIterable {
         }
     }
     
+    // @note modifier symbol for keybind display
+    var modifierSymbol: String {
+        switch self {
+        case .optionSpace: return "⌥"
+        case .commandSpace: return "⌘"
+        case .controlSpace: return "⌃"
+        }
+    }
+    
+    // @note NSEvent modifier flags for key detection
+    var nsEventModifierFlag: NSEvent.ModifierFlags {
+        switch self {
+        case .optionSpace: return .option
+        case .commandSpace: return .command
+        case .controlSpace: return .control
+        }
+    }
+    
     var modifierKey: UInt32 {
         switch self {
         case .optionSpace: return UInt32(Carbon.optionKey)
