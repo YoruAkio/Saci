@@ -44,28 +44,28 @@ class AppSearchService: ObservableObject {
         loadApps()
     }
     
-    // @note load apps from cache first, then update in background
+    // @note load apps from cache first, then validate in background
     private func loadApps() {
         isLoading = true
         
-        // @note try to load from cache first for instant results
-        if let cachedApps = loadFromCache() {
+        // @note try to load from cache instantly (no file existence checks)
+        if let cachedApps = loadFromCacheInstant() {
             appsQueue.sync {
                 allApps = cachedApps
             }
             isLoading = false
             
-            // @note update cache in background
-            updateCacheInBackground()
+            // @note validate and update cache in background
+            validateAndUpdateCacheInBackground()
         } else {
             // @note no cache, do full scan
             fullScan()
         }
     }
     
-    // @note load apps from cache file
+    // @note load apps from cache file instantly without file existence validation
     // @return array of SearchResult or nil if cache doesn't exist
-    private func loadFromCache() -> [SearchResult]? {
+    private func loadFromCacheInstant() -> [SearchResult]? {
         guard let cacheURL = cacheFileURL,
               fileManager.fileExists(atPath: cacheURL.path),
               let data = try? Data(contentsOf: cacheURL),
@@ -73,11 +73,8 @@ class AppSearchService: ObservableObject {
             return nil
         }
         
-        // @note filter out apps that no longer exist
-        let validApps = cache.apps.filter { fileManager.fileExists(atPath: $0.path) }
-        
-        // @note convert to SearchResult with icons
-        return validApps.map { $0.toSearchResult() }
+        // @note convert to SearchResult with icons, skip file existence check for speed
+        return cache.apps.map { $0.toSearchResult() }
             .sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
     
@@ -93,26 +90,27 @@ class AppSearchService: ObservableObject {
         }
     }
     
-    // @note update cache in background, detecting new/removed apps
-    private func updateCacheInBackground() {
+    // @note validate cached apps and update in background
+    private func validateAndUpdateCacheInBackground() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
             
+            // @note get current cached paths
+            let currentApps = self.appsQueue.sync { self.allApps }
+            
+            // @note filter out apps that no longer exist (file existence check in background)
+            let validPaths = Set(currentApps.filter {
+                self.fileManager.fileExists(atPath: $0.path)
+            }.map { $0.path })
+            
+            let removedPaths = Set(currentApps.map { $0.path }).subtracting(validPaths)
+            
+            // @note scan for new apps
             let scannedApps = self.scanAllApps()
-            
-            // @note thread-safe read of current paths
-            let currentPaths = self.appsQueue.sync {
-                Set(self.allApps.map { $0.path })
-            }
             let scannedPaths = Set(scannedApps.map { $0.path })
-            
-            // @note find new apps
-            let newPaths = scannedPaths.subtracting(currentPaths)
-            // @note find removed apps
-            let removedPaths = currentPaths.subtracting(scannedPaths)
+            let newPaths = scannedPaths.subtracting(validPaths)
             
             if !newPaths.isEmpty || !removedPaths.isEmpty {
-                // @note update cache and memory
                 let newApps = scannedApps.filter { newPaths.contains($0.path) }
                     .map { $0.toSearchResult() }
                 
@@ -128,8 +126,9 @@ class AppSearchService: ObservableObject {
                     }
                 }
                 
-                // @note save updated cache
-                self.saveToCache(scannedApps)
+                // @note save updated cache with only valid apps
+                let validCachedApps = scannedApps.filter { validPaths.contains($0.path) || newPaths.contains($0.path) }
+                self.saveToCache(validCachedApps)
             }
         }
     }
