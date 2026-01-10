@@ -248,6 +248,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         
         guard let window = mainWindow else { return }
         
+        // @note clean up old content view to prevent memory leak
+        window.contentView = nil
+        
         window.identifier = NSUserInterfaceItemIdentifier("main")
         window.contentView = NSHostingView(rootView: contentView)
         window.isOpaque = false
