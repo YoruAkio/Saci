@@ -98,45 +98,63 @@ class AppSearchService: ObservableObject {
         }
     }
     
-    // @note validate cached apps and update in background
+    // @note validate cached apps and update in background using single-pass algorithm
     private func validateAndUpdateCacheInBackground() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
             
-            // @note get current cached paths
+            // @note get current cached apps
             let currentApps = self.appsQueue.sync { self.allApps }
             
-            // @note filter out apps that no longer exist (file existence check in background)
-            let validPaths = Set(currentApps.filter {
-                self.fileManager.fileExists(atPath: $0.path)
-            }.map { $0.path })
+            // @note build lookup of current paths in single pass
+            var currentPathsMap: [String: Bool] = [:]
+            currentPathsMap.reserveCapacity(currentApps.count)
+            for app in currentApps {
+                // @note check existence and store result
+                currentPathsMap[app.path] = self.fileManager.fileExists(atPath: app.path)
+            }
             
-            let removedPaths = Set(currentApps.map { $0.path }).subtracting(validPaths)
-            
-            // @note scan for new apps
+            // @note scan filesystem for apps
             let scannedApps = self.scanAllApps()
-            let scannedPaths = Set(scannedApps.map { $0.path })
-            let newPaths = scannedPaths.subtracting(validPaths)
             
-            if !newPaths.isEmpty || !removedPaths.isEmpty {
-                let newApps = scannedApps.filter { newPaths.contains($0.path) }
-                    .map { $0.toSearchResult() }
-                
-                // @note thread-safe update of allApps on main thread
+            // @note single pass to find new apps and build final list
+            var newApps: [SearchResult] = []
+            var finalCachedApps: [CachedApp] = []
+            finalCachedApps.reserveCapacity(scannedApps.count)
+            
+            for app in scannedApps {
+                finalCachedApps.append(app)
+                if currentPathsMap[app.path] == nil {
+                    // @note new app not in cache
+                    newApps.append(app.toSearchResult())
+                }
+            }
+            
+            // @note collect removed paths (existed in cache but not in scan, or file deleted)
+            let scannedPathsSet = Set(scannedApps.map { $0.path })
+            var removedPaths: Set<String> = []
+            for (path, exists) in currentPathsMap {
+                if !exists || !scannedPathsSet.contains(path) {
+                    removedPaths.insert(path)
+                }
+            }
+            
+            // @note only update if there are changes
+            if !newApps.isEmpty || !removedPaths.isEmpty {
                 DispatchQueue.main.async {
                     self.appsQueue.sync {
-                        // @note remove deleted apps
-                        self.allApps.removeAll { removedPaths.contains($0.path) }
-                        // @note add new apps
-                        self.allApps.append(contentsOf: newApps)
-                        // @note sort
-                        self.allApps.sort { $0.name.lowercased() < $1.name.lowercased() }
+                        if !removedPaths.isEmpty {
+                            self.allApps.removeAll { removedPaths.contains($0.path) }
+                        }
+                        if !newApps.isEmpty {
+                            self.allApps.append(contentsOf: newApps)
+                            self.allApps.sort { $0.name.lowercased() < $1.name.lowercased() }
+                        }
                     }
                 }
                 
-                // @note save updated cache with only valid apps
-                let validCachedApps = scannedApps.filter { validPaths.contains($0.path) || newPaths.contains($0.path) }
-                self.saveToCache(validCachedApps)
+                // @note save updated cache
+                self.saveToCache(finalCachedApps)
             }
         }
     }
