@@ -27,8 +27,16 @@ class SaciWindow: NSWindow {
 // @note non-activating panel for launcher (like Raycast/Alfred)
 // @note this panel does not steal focus from the previous app
 class SaciPanel: NSPanel {
+    var onResignKey: (() -> Void)?
+    
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+    
+    // @note called when panel loses key status (e.g., Cmd+Tab)
+    override func resignKey() {
+        super.resignKey()
+        onResignKey?()
+    }
 }
 
 // @note app delegate to handle window configuration, hotkey and status bar
@@ -296,6 +304,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         )
         
         guard let panel = mainPanel else { return }
+        
+        // @note close panel when it loses key status (Cmd+Tab, click elsewhere)
+        panel.onResignKey = { [weak self] in
+            self?.hidePanel()
+        }
         
         panel.identifier = NSUserInterfaceItemIdentifier("main")
         panel.contentView = NSHostingView(rootView: contentView)
