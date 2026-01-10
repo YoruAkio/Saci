@@ -101,15 +101,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     // @note handle theme change notification
     @objc private func themeDidChange() {
         applyTheme()
-        
-        // @note recreate main window with new theme
-        let wasVisible = mainWindow?.isVisible ?? false
-        createMainWindow()
-        if wasVisible {
-            showWindow()
-        }
-        
-        // @note settings window updates automatically via NSApp.appearance
+        // @note SwiftUI views update automatically via @Environment(\.colorScheme)
+        // @note no need to recreate window
     }
     
     // @note handle dock icon setting change
@@ -119,14 +112,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note handle transparency setting change
     @objc private func transparencyDidChange() {
-        // @note recreate main window with new transparency
-        let wasVisible = mainWindow?.isVisible ?? false
-        createMainWindow()
-        if wasVisible {
-            showWindow()
-        }
-        
-        // @note update settings window transparency
+        // @note SwiftUI views update automatically via @ObservedObject settings
+        // @note no need to recreate window
         updateSettingsWindowTransparency()
     }
     
@@ -226,7 +213,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         }
     }
     
-    // @note create the main search window (hidden by default)
+    // @note create the main search window (called once at startup)
     private func createMainWindow() {
         let contentView = ContentView(
             onEscape: { [weak self] in
@@ -237,19 +224,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             }
         )
         
-        if mainWindow == nil {
-            mainWindow = SaciWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 680, height: 100),
-                styleMask: [.borderless, .fullSizeContentView],
-                backing: .buffered,
-                defer: false
-            )
-        }
+        mainWindow = SaciWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 100),
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
         
         guard let window = mainWindow else { return }
-        
-        // @note clean up old content view to prevent memory leak
-        window.contentView = nil
         
         window.identifier = NSUserInterfaceItemIdentifier("main")
         window.contentView = NSHostingView(rootView: contentView)
