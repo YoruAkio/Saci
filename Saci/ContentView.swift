@@ -278,7 +278,7 @@ struct ContentView: View {
     private func launchSelectedApp() {
         guard !searchService.results.isEmpty else { return }
         let maxIndex = min(searchService.results.count, settings.maxResults) - 1
-        guard selectedIndex <= maxIndex else { return }
+        guard selectedIndex >= 0 && selectedIndex <= maxIndex else { return }
         
         let result = searchService.results[selectedIndex]
         searchService.launchApp(at: result.path)
@@ -290,7 +290,7 @@ struct ContentView: View {
     private func launchAppAtIndex(_ index: Int) {
         guard !searchService.results.isEmpty else { return }
         let maxIndex = min(searchService.results.count, settings.maxResults) - 1
-        guard index <= maxIndex else { return }
+        guard index >= 0 && index <= maxIndex else { return }
         
         let result = searchService.results[index]
         searchService.launchApp(at: result.path)
