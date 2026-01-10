@@ -1,0 +1,43 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.xcuserstate
+
+# Build
+build/
+.build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Code Injection
+*.hmap
+
+# Archives
+*.xcarchive
+
+# Crash logs
+*.crash
+
+# Profiling
+*.gcno
+*.gcda
+
+# SourceKit LSP
+.sourcekit-lsp/

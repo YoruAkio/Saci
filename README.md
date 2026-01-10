@@ -1,0 +1,90 @@
+<h1 align="center">Saci</h1>
+
+<p align="center">
+  A powerful macOS productivity launcher that provides Spotlight-like functionality built using native Swift/SwiftUI, inspired by Alfred and Raycast.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-alpha-orange" alt="Status: Alpha">
+  <img src="https://img.shields.io/badge/platform-macOS-blue" alt="Platform: macOS">
+  <img src="https://img.shields.io/badge/swift-5.0-orange" alt="Swift 5.0">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT">
+</p>
+
+## Features
+
+- **Quick App Launching** - Search and launch applications instantly with a global hotkey
+- **Global Hotkey** - Trigger from anywhere with customizable shortcuts (Option+Space, Cmd+Space, or Ctrl+Space)
+- **Native Performance** - Built with pure Swift/SwiftUI, no external dependencies
+- **Menu Bar App** - Lives in your menu bar, always ready when you need it
+- **Customizable Appearance** - Light, dark, or system theme with optional transparency effects
+- **Keyboard Navigation** - Full keyboard support with arrow keys and Enter to launch
+
+## Requirements
+
+- macOS 13.7 or later
+- Xcode 15.2 (for building from source)
+
+> **Note**: This app was built and tested on macOS 13.7 using Xcode 15.2.
+
+## Installation
+
+### Build from Source
+
+```bash
+git clone https://github.com/YoruAkio/Saci.git
+cd Saci
+xcodebuild -project Saci.xcodeproj -scheme Saci -configuration Release build
+```
+
+The built app will be in the `build/` directory.
+
+### Manual Installation
+
+1. Download the latest release
+2. Move `Saci.app` to `/Applications`
+3. Launch Saci
+4. Grant Accessibility permissions when prompted (required for global hotkey)
+
+## Usage
+
+### Basic Usage
+
+1. Press **Option + Space** (default) to open Saci
+2. Type to search for applications
+3. Use **Arrow Keys** to navigate results
+4. Press **Enter** to launch the selected app
+5. Press **Escape** to close
+
+### General
+
+- **Hotkey** - Choose between Option+Space, Cmd+Space, or Ctrl+Space
+- **Max Results** - Number of results to display (5, 8, 10, or 15)
+- **Launch at Login** - Start Saci automatically when you log in
+- **Show in Dock** - Show dock icon when settings window is open
+
+## Building
+
+```bash
+# Debug build
+xcodebuild -project Saci.xcodeproj -scheme Saci -configuration Debug build
+
+# Release build
+xcodebuild -project Saci.xcodeproj -scheme Saci -configuration Release build
+
+# Clean
+xcodebuild -project Saci.xcodeproj -scheme Saci clean
+```
+
+## Contributing
+
+Contributions are welcome! Feel free to submit pull requests or open issues.
+
+If you find a bug, please consider opening an issue with:
+- A clear description of the problem
+- Steps to reproduce
+- Your macOS version and Xcode version
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

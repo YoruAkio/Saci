@@ -1,0 +1,402 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		66E08BF82F1193B50078F2AC /* SaciApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08BF72F1193B50078F2AC /* SaciApp.swift */; };
+		66E08BFA2F1193B50078F2AC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08BF92F1193B50078F2AC /* ContentView.swift */; };
+		66E08BFC2F1193B70078F2AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 66E08BFB2F1193B70078F2AC /* Assets.xcassets */; };
+		66E08BFF2F1193B70078F2AC /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 66E08BFE2F1193B70078F2AC /* Preview Assets.xcassets */; };
+		66E08C102F119A000078F2AC /* SearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0A2F119A000078F2AC /* SearchResult.swift */; };
+		66E08C112F119A000078F2AC /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0B2F119A000078F2AC /* AppSettings.swift */; };
+		66E08C122F119A000078F2AC /* AppSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0C2F119A000078F2AC /* AppSearchService.swift */; };
+		66E08C132F119A000078F2AC /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0D2F119A000078F2AC /* HotkeyManager.swift */; };
+		66E08C142F119A000078F2AC /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C062F119A000078F2AC /* SearchBarView.swift */; };
+		66E08C152F119A000078F2AC /* ResultRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C072F119A000078F2AC /* ResultRowView.swift */; };
+		66E08C162F119A000078F2AC /* ResultsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C082F119A000078F2AC /* ResultsListView.swift */; };
+		66E08C172F119A000078F2AC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C092F119A000078F2AC /* SettingsView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		66E08BF42F1193B50078F2AC /* Saci.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Saci.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		66E08BF72F1193B50078F2AC /* SaciApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaciApp.swift; sourceTree = "<group>"; };
+		66E08BF92F1193B50078F2AC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		66E08BFB2F1193B70078F2AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		66E08BFE2F1193B70078F2AC /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		66E08C002F1193B70078F2AC /* Saci.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Saci.entitlements; sourceTree = "<group>"; };
+		66E08C062F119A000078F2AC /* SearchBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBarView.swift; sourceTree = "<group>"; };
+		66E08C072F119A000078F2AC /* ResultRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRowView.swift; sourceTree = "<group>"; };
+		66E08C082F119A000078F2AC /* ResultsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsListView.swift; sourceTree = "<group>"; };
+		66E08C092F119A000078F2AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		66E08C0A2F119A000078F2AC /* SearchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResult.swift; sourceTree = "<group>"; };
+		66E08C0B2F119A000078F2AC /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		66E08C0C2F119A000078F2AC /* AppSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchService.swift; sourceTree = "<group>"; };
+		66E08C0D2F119A000078F2AC /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		66E08BF12F1193B50078F2AC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		66E08BEB2F1193B50078F2AC = {
+			isa = PBXGroup;
+			children = (
+				66E08BF62F1193B50078F2AC /* Saci */,
+				66E08BF52F1193B50078F2AC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		66E08BF52F1193B50078F2AC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				66E08BF42F1193B50078F2AC /* Saci.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		66E08BF62F1193B50078F2AC /* Saci */ = {
+			isa = PBXGroup;
+			children = (
+				66E08BF72F1193B50078F2AC /* SaciApp.swift */,
+				66E08BF92F1193B50078F2AC /* ContentView.swift */,
+				66E08C182F119A100078F2AC /* Views */,
+				66E08C192F119A100078F2AC /* Models */,
+				66E08C1A2F119A100078F2AC /* Services */,
+				66E08BFB2F1193B70078F2AC /* Assets.xcassets */,
+				66E08C002F1193B70078F2AC /* Saci.entitlements */,
+				66E08BFD2F1193B70078F2AC /* Preview Content */,
+			);
+			path = Saci;
+			sourceTree = "<group>";
+		};
+		66E08BFD2F1193B70078F2AC /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				66E08BFE2F1193B70078F2AC /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		66E08C182F119A100078F2AC /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				66E08C062F119A000078F2AC /* SearchBarView.swift */,
+				66E08C072F119A000078F2AC /* ResultRowView.swift */,
+				66E08C082F119A000078F2AC /* ResultsListView.swift */,
+				66E08C092F119A000078F2AC /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		66E08C192F119A100078F2AC /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				66E08C0A2F119A000078F2AC /* SearchResult.swift */,
+				66E08C0B2F119A000078F2AC /* AppSettings.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		66E08C1A2F119A100078F2AC /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				66E08C0C2F119A000078F2AC /* AppSearchService.swift */,
+				66E08C0D2F119A000078F2AC /* HotkeyManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		66E08BF32F1193B50078F2AC /* Saci */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 66E08C032F1193B70078F2AC /* Build configuration list for PBXNativeTarget "Saci" */;
+			buildPhases = (
+				66E08BF02F1193B50078F2AC /* Sources */,
+				66E08BF12F1193B50078F2AC /* Frameworks */,
+				66E08BF22F1193B50078F2AC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Saci;
+			productName = Saci;
+			productReference = 66E08BF42F1193B50078F2AC /* Saci.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		66E08BEC2F1193B50078F2AC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1520;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					66E08BF32F1193B50078F2AC = {
+						CreatedOnToolsVersion = 15.2;
+					};
+				};
+			};
+			buildConfigurationList = 66E08BEF2F1193B50078F2AC /* Build configuration list for PBXProject "Saci" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 66E08BEB2F1193B50078F2AC;
+			productRefGroup = 66E08BF52F1193B50078F2AC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				66E08BF32F1193B50078F2AC /* Saci */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		66E08BF22F1193B50078F2AC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				66E08BFF2F1193B70078F2AC /* Preview Assets.xcassets in Resources */,
+				66E08BFC2F1193B70078F2AC /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		66E08BF02F1193B50078F2AC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				66E08BFA2F1193B50078F2AC /* ContentView.swift in Sources */,
+				66E08BF82F1193B50078F2AC /* SaciApp.swift in Sources */,
+				66E08C102F119A000078F2AC /* SearchResult.swift in Sources */,
+				66E08C112F119A000078F2AC /* AppSettings.swift in Sources */,
+				66E08C122F119A000078F2AC /* AppSearchService.swift in Sources */,
+				66E08C132F119A000078F2AC /* HotkeyManager.swift in Sources */,
+				66E08C142F119A000078F2AC /* SearchBarView.swift in Sources */,
+				66E08C152F119A000078F2AC /* ResultRowView.swift in Sources */,
+				66E08C162F119A000078F2AC /* ResultsListView.swift in Sources */,
+				66E08C172F119A000078F2AC /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		66E08C012F1193B70078F2AC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.7;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		66E08C022F1193B70078F2AC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.7;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		66E08C042F1193B70078F2AC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Saci/Saci.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Saci/Preview Content\"";
+				DEVELOPMENT_TEAM = H5ZAK67RAF;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0-alpha;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yoruakio.Saci;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		66E08C052F1193B70078F2AC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Saci/Saci.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Saci/Preview Content\"";
+				DEVELOPMENT_TEAM = H5ZAK67RAF;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0-alpha;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yoruakio.Saci;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		66E08BEF2F1193B50078F2AC /* Build configuration list for PBXProject "Saci" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				66E08C012F1193B70078F2AC /* Debug */,
+				66E08C022F1193B70078F2AC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		66E08C032F1193B70078F2AC /* Build configuration list for PBXNativeTarget "Saci" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				66E08C042F1193B70078F2AC /* Debug */,
+				66E08C052F1193B70078F2AC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 66E08BEC2F1193B50078F2AC /* Project object */;
+}
