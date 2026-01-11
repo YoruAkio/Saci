@@ -303,9 +303,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             button.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Saci")
         }
         
+        // @note get version from bundle
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        
         let menu = NSMenu()
         menu.delegate = self
-        menu.addItem(NSMenuItem(title: "Show Saci", action: #selector(toggleWindowFromMenu), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Toggle Saci", action: #selector(toggleWindowFromMenu), keyEquivalent: ""))
+        
+        // @note version item (disabled, just for display)
+        let versionItem = NSMenuItem(title: "Saci \(version) [\(build)]", action: nil, keyEquivalent: "")
+        versionItem.isEnabled = false
+        menu.addItem(versionItem)
+        
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
@@ -316,12 +326,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note update menu item title based on panel visibility
     func menuWillOpen(_ menu: NSMenu) {
+        // @note toggle item is at index 0
         if let toggleItem = menu.items.first {
-            if mainPanel?.isVisible == true {
-                toggleItem.title = "Hide Saci"
-            } else {
-                toggleItem.title = "Show Saci"
-            }
+            toggleItem.title = mainPanel?.isVisible == true ? "Hide Saci" : "Show Saci"
         }
     }
     
