@@ -39,16 +39,9 @@ xcodebuild -project Saci.xcodeproj -scheme Saci -configuration Release build
 
 The built app will be in the `build/` directory.
 
-### Manual Installation
+> **Note**: The pre-build app it's not ready for distribution yet. You can build it from source if you want to try it out.
 
-1. Download the latest release
-2. Move `Saci.app` to `/Applications`
-3. Launch Saci
-4. Grant Accessibility permissions when prompted (required for global hotkey)
-
-## Usage
-
-### Basic Usage
+## Basic Usage
 
 1. Press **Option + Space** (default) to open Saci
 2. Type to search for applications
