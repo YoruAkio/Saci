@@ -40,6 +40,12 @@ struct FooterMenuButton: View {
             : Color(nsColor: NSColor(white: 0.92, alpha: 1))
     }
     
+    // @note get app version from bundle
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        return "Saci v\(version)"
+    }
+    
     var body: some View {
         Button(action: { showMenu.toggle() }) {
             Image(systemName: "magnifyingglass")
@@ -54,8 +60,8 @@ struct FooterMenuButton: View {
         .buttonStyle(.plain)
         .popover(isPresented: $showMenu, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 0) {
-                // @note version header
-                Text("Saci v0.1.0-alpha")
+                // @note version header (dynamic from bundle)
+                Text(appVersion)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.primary)
                     .padding(.horizontal, 12)
