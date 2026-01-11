@@ -50,6 +50,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     var globalEventMonitor: Any?
     private var errorCancellable: AnyCancellable?
     
+    // @note flag to prevent panel closing when transitioning to child windows (settings, etc.)
+    private var isTransitioningToChildWindow = false
+    
     func applicationWillFinishLaunching(_ notification: Notification) {
         // @note check if another instance is already running
         if checkForExistingInstance() {
@@ -128,6 +131,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             name: .transparencyDidChange,
             object: nil
         )
+        
+        // @note observe when another app becomes active (for Cmd+Tab detection)
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(anotherAppDidActivate(_:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
     }
     
     // @note handle theme change notification
@@ -146,6 +157,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         // @note SwiftUI views update automatically via @ObservedObject settings
         // @note no need to recreate window
         updateSettingsWindowTransparency()
+    }
+    
+    // @note handle when another app becomes active (Cmd+Tab, clicking other app, etc.)
+    // @param notification contains info about the activated app
+    @objc private func anotherAppDidActivate(_ notification: Notification) {
+        guard let panel = mainPanel, panel.isVisible else { return }
+        
+        // @note check if the activated app is ours - if so, don't hide
+        if let userInfo = notification.userInfo,
+           let app = userInfo[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+           app.bundleIdentifier == Bundle.main.bundleIdentifier {
+            return
+        }
+        
+        // @note another app became active, hide the panel
+        hidePanel()
     }
     
     // @note apply transparency setting to a window
@@ -187,8 +214,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
                 return event
             }
             
-            // @note check if click is outside main panel
-            if event.window != mainPanel {
+            // @note don't hide if transitioning to child window
+            if self.isTransitioningToChildWindow {
+                return event
+            }
+            
+            // @note check if click is on a popover (child of main panel)
+            let isPopover = event.window?.className.contains("Popover") ?? false
+            let isChildOfPanel = event.window?.parent == mainPanel
+            
+            // @note check if click is outside main panel and not on popover
+            if event.window != mainPanel && !isPopover && !isChildOfPanel {
                 self.hidePanel()
             }
             
@@ -198,6 +234,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         // @note global monitor for clicks outside the app
         globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self, let panel = self.mainPanel, panel.isVisible else {
+                return
+            }
+            
+            // @note don't hide if transitioning to child window
+            if self.isTransitioningToChildWindow {
                 return
             }
             
@@ -292,7 +333,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
                 self?.hidePanel()
             },
             onOpenSettings: { [weak self] in
-                self?.openSettings()
+                // @note open settings and hide panel when opened from footer
+                self?.openSettingsWindow(andHidePanel: true)
             }
         )
         
@@ -305,9 +347,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         
         guard let panel = mainPanel else { return }
         
-        // @note close panel when it loses key status (Cmd+Tab, click elsewhere)
+        // @note conditionally hide panel when it loses key status (ignore popovers and our windows)
         panel.onResignKey = { [weak self] in
-            self?.hidePanel()
+            guard let self = self else { return }
+            
+            // @note don't hide if transitioning to a child window (settings, etc.)
+            if self.isTransitioningToChildWindow { return }
+            
+            // @note delay to allow new key window to be set reliably
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                // @note double-check flag in case it was set during delay
+                if self.isTransitioningToChildWindow { return }
+                
+                let newKeyWindow = NSApp.keyWindow
+                
+                // @note check if new window is a popover by class name
+                let isPopover = newKeyWindow?.className.contains("Popover") ?? false
+                
+                // @note don't hide if focus moved to our windows or popover
+                let isOurWindow = newKeyWindow == self.mainPanel ||
+                                  newKeyWindow == self.settingsWindow ||
+                                  newKeyWindow == self.errorWindow ||
+                                  newKeyWindow?.parent == self.mainPanel ||
+                                  isPopover
+                
+                if !isOurWindow {
+                    self.hidePanel()
+                }
+            }
         }
         
         panel.identifier = NSUserInterfaceItemIdentifier("main")
@@ -327,10 +394,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     }
     
     // @note open settings window
+    // @param hidePanel if true, hides the main panel after opening settings
     @objc private func openSettings() {
+        openSettingsWindow(andHidePanel: false)
+    }
+    
+    // @note open settings window with option to hide panel
+    // @param andHidePanel if true, hides the main panel after opening settings
+    private func openSettingsWindow(andHidePanel shouldHidePanel: Bool) {
+        // @note set flag to prevent panel from closing during transition
+        isTransitioningToChildWindow = true
+        
+        // @note reset flag after delay to allow all window transitions to complete
+        // @note this must be longer than the resignKey delay (0.05s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.isTransitioningToChildWindow = false
+        }
+        
         if let window = settingsWindow, window.isVisible {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
+            if shouldHidePanel { hidePanel() }
             return
         }
         
@@ -363,6 +447,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         // @note show dock icon when settings opens
         updateDockIconVisibility()
         NSApp.activate(ignoringOtherApps: true)
+        
+        // @note hide panel after settings is opened (when requested)
+        if shouldHidePanel { hidePanel() }
     }
     
     // @note close settings window
@@ -448,6 +535,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             NSEvent.removeMonitor(monitor)
         }
         NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
 }
 

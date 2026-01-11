@@ -328,13 +328,6 @@ struct ContentView: View {
             selectedIndex = 0
             calculatorResult = nil
             showCopiedFeedback = false
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .saciWindowWillShow)) { _ in
-            // @note reset all state when window appears
-            searchText = ""
-            calculatorResult = nil
-            selectedIndex = 0
-            showCopiedFeedback = false
             searchService.clearResults()
         }
         .sheet(isPresented: $showSettings) {
