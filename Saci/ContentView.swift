@@ -10,6 +10,7 @@ struct VisualEffectBackground: NSViewRepresentable {
     var material: NSVisualEffectView.Material
     var blendingMode: NSVisualEffectView.BlendingMode
     var cornerRadius: CGFloat
+    var opacity: CGFloat = 1.0
     
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -19,12 +20,14 @@ struct VisualEffectBackground: NSViewRepresentable {
         view.wantsLayer = true
         view.layer?.cornerRadius = cornerRadius
         view.layer?.masksToBounds = true
+        view.alphaValue = opacity
         return view
     }
     
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
+        nsView.alphaValue = opacity
     }
 }
 
@@ -111,11 +114,11 @@ struct SearchFooterView: View {
     var actionText: String = "Open Application"
     @Environment(\.colorScheme) var colorScheme
     
-    // @note semi-transparent overlay color above the blur
+    // @note semi-transparent overlay color above the blur (95% opacity)
     private var footerOverlayColor: Color {
         colorScheme == .dark
-            ? Color(nsColor: NSColor(white: 0.08, alpha: 0.6))
-            : Color(nsColor: NSColor(white: 0.85, alpha: 0.6))
+            ? Color(nsColor: NSColor(white: 0.08, alpha: 0.95))
+            : Color(nsColor: NSColor(white: 0.85, alpha: 0.95))
     }
     
     // @note solid background when transparency disabled
@@ -202,6 +205,13 @@ struct ContentView: View {
         colorScheme == .dark 
             ? Color(nsColor: NSColor(white: 0.12, alpha: 1))
             : Color(nsColor: NSColor(white: 0.95, alpha: 1))
+    }
+    
+    // @note background overlay color for transparency mode (50% opacity)
+    private var backgroundOverlayColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.12, alpha: 0.50))
+            : Color(nsColor: NSColor(white: 0.95, alpha: 0.50))
     }
     
     // @note divider color based on theme
@@ -293,11 +303,17 @@ struct ContentView: View {
         .frame(width: 680)
         .background {
             if settings.enableTransparency {
-                VisualEffectBackground(
-                    material: .hudWindow,
-                    blendingMode: .behindWindow,
-                    cornerRadius: 12
-                )
+                ZStack {
+                    VisualEffectBackground(
+                        material: .hudWindow,
+                        blendingMode: .behindWindow,
+                        cornerRadius: 12,
+                        opacity: 1.0
+                    )
+                    
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(backgroundOverlayColor)
+                }
             } else {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(solidBackgroundColor)

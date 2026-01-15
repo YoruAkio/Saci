@@ -152,7 +152,7 @@ struct SettingsView: View {
                 // @note footer
                 Divider()
                 
-                Text("Saci v0.1.0-alpha")
+                Text(appVersion)
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity)
@@ -164,6 +164,12 @@ struct SettingsView: View {
             settings.syncLaunchAtLogin()
             launchAtLogin = settings.launchAtLogin
         }
+    }
+    
+    // @note get app version from bundle
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        return "Saci v\(version)"
     }
     
     // @note general settings tab content

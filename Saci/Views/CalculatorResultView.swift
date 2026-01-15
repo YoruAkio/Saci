@@ -20,11 +20,11 @@ struct CalculatorResultView: View {
             : Color(nsColor: NSColor(white: 0.85, alpha: 1))
     }
     
-    // @note inner container background color
+    // @note inner container background color (70% opacity)
     private var containerColor: Color {
         colorScheme == .dark
-            ? Color(nsColor: NSColor(white: 0.15, alpha: 1))
-            : Color(nsColor: NSColor(white: 0.95, alpha: 1))
+            ? Color(nsColor: NSColor(white: 0.15, alpha: 0.7))
+            : Color(nsColor: NSColor(white: 0.95, alpha: 0.7))
     }
     
     // @note truncate expression if too long
@@ -164,9 +164,11 @@ struct CalculatorSectionHeader: View {
         HStack(spacing: 6) {
             Image(systemName: "function")
                 .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.secondary)
             
             Text("Calculator")
                 .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.secondary)
             
             Spacer()
         }
