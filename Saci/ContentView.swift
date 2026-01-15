@@ -158,7 +158,7 @@ struct SearchFooterView: View {
 
 // @note main search window UI
 struct ContentView: View {
-    @StateObject private var searchService = AppSearchService()
+    @ObservedObject private var searchService = AppSearchService.shared
     @ObservedObject private var settings = AppSettings.shared
     @State private var searchText = ""
     @State private var selectedIndex = 0

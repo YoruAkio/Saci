@@ -8,6 +8,8 @@ import Combine
 
 // @note service to search installed applications with persistent cache
 class AppSearchService: ObservableObject {
+    static let shared = AppSearchService()
+    
     @Published var results: [SearchResult] = []
     @Published var isLoading = false
     
@@ -24,6 +26,10 @@ class AppSearchService: ObservableObject {
     // @note debounce search to avoid excessive filtering
     private var searchWorkItem: DispatchWorkItem?
     private let searchDebounceMs: Int = 50
+    
+    // @note file system monitoring for automatic app detection
+    private var eventStream: FSEventStreamRef?
+    private var monitorWorkItem: DispatchWorkItem?
     
     // @note search paths for applications
     private let searchPaths = [
@@ -50,6 +56,11 @@ class AppSearchService: ObservableObject {
     
     init() {
         loadApps()
+        startFileSystemMonitoring()
+    }
+    
+    deinit {
+        stopFileSystemMonitoring()
     }
     
     // @note load apps from cache first, then validate in background
@@ -276,5 +287,73 @@ class AppSearchService: ObservableObject {
             try? fileManager.removeItem(at: cacheURL)
         }
         fullScan()
+    }
+    
+    // @note start file system monitoring for automatic app detection
+    private func startFileSystemMonitoring() {
+        let pathsToWatch = searchPaths as CFArray
+        
+        var context = FSEventStreamContext(
+            version: 0,
+            info: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
+            retain: nil,
+            release: nil,
+            copyDescription: nil
+        )
+        
+        let callback: FSEventStreamCallback = { (
+            streamRef,
+            clientCallBackInfo,
+            numEvents,
+            eventPaths,
+            eventFlags,
+            eventIds
+        ) in
+            guard let info = clientCallBackInfo else { return }
+            let service = Unmanaged<AppSearchService>.fromOpaque(info).takeUnretainedValue()
+            service.handleFileSystemEvent()
+        }
+        
+        eventStream = FSEventStreamCreate(
+            kCFAllocatorDefault,
+            callback,
+            &context,
+            pathsToWatch,
+            FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
+            3.0,
+            UInt32(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer)
+        )
+        
+        if let stream = eventStream {
+            FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetMain(), CFRunLoopMode.defaultMode.rawValue)
+            FSEventStreamStart(stream)
+        }
+    }
+    
+    // @note stop file system monitoring
+    private func stopFileSystemMonitoring() {
+        if let stream = eventStream {
+            FSEventStreamStop(stream)
+            FSEventStreamInvalidate(stream)
+            FSEventStreamRelease(stream)
+            eventStream = nil
+        }
+        monitorWorkItem?.cancel()
+    }
+    
+    // @note handle file system event with debouncing
+    private func handleFileSystemEvent() {
+        // @note cancel previous work item
+        monitorWorkItem?.cancel()
+        
+        // @note create new work item with 3 second delay
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.validateAndUpdateCacheInBackground()
+        }
+        
+        monitorWorkItem = workItem
+        
+        // @note execute after delay on main queue
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: workItem)
     }
 }
