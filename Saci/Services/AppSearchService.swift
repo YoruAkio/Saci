@@ -246,18 +246,8 @@ class AppSearchService: ObservableObject {
             // @note limit for early termination (get extra for better ranking)
             let limit = maxResults + 5
             
-            // @note filter with early termination and case-insensitive matching
-            var filtered: [SearchResult] = []
-            filtered.reserveCapacity(limit)
-            
-            for app in apps {
-                // @note use range(of:options:) for case-insensitive without allocation
-                if app.name.range(of: query, options: .caseInsensitive) != nil {
-                    filtered.append(app)
-                    // @note stop early once we have enough results
-                    if filtered.count >= limit { break }
-                }
-            }
+            // @note use fuzzy search for better matching (vscode -> Visual Studio Code)
+            let filtered = FuzzySearchService.search(query: query, in: apps, limit: limit)
             
             // @note update results on main thread
             DispatchQueue.main.async { [weak self] in
