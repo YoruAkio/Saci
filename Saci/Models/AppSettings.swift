@@ -83,7 +83,6 @@ class AppSettings: ObservableObject {
     @AppStorage("maxResults") var maxResults: Int = 8
     @AppStorage("appTheme") var appThemeRaw: String = AppTheme.system.rawValue
     @AppStorage("hotkeyOption") var hotkeyOptionRaw: String = HotkeyOption.optionSpace.rawValue
-    @AppStorage("showDockIcon") var showDockIcon: Bool = true
     @AppStorage("enableTransparency") var enableTransparency: Bool = true {
         didSet {
             NotificationCenter.default.post(name: .transparencyDidChange, object: nil)

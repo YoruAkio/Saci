@@ -162,7 +162,6 @@ struct ContentView: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var searchText = ""
     @State private var selectedIndex = 0
-    @State private var showSettings = false
     @State private var calculatorResult: CalculatorResult?
     @State private var showCopiedFeedback = false
     @Environment(\.colorScheme) var colorScheme
@@ -376,9 +375,6 @@ struct ContentView: View {
             showCopiedFeedback = false
             searchService.clearResults()
         }
-        .sheet(isPresented: $showSettings) {
-            SettingsView(settings: settings)
-        }
     }
     
     // @note get valid max index for current results (considering calculator)
@@ -468,11 +464,7 @@ struct ContentView: View {
     
     // @note open settings
     private func openSettings() {
-        if let onOpenSettings = onOpenSettings {
-            onOpenSettings()
-        } else {
-            showSettings = true
-        }
+        onOpenSettings?()
     }
 }
 

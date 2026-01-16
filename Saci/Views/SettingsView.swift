@@ -12,9 +12,13 @@ enum SettingsTab: String, CaseIterable {
     
     var icon: String {
         switch self {
-        case .general: return "gearshape.fill"
-        case .appearance: return "paintbrush.fill"
+        case .general: return "gearshape"
+        case .appearance: return "paintbrush"
         }
+    }
+    
+    var toolbarIdentifier: NSToolbarItem.Identifier {
+        return NSToolbarItem.Identifier(rawValue: self.rawValue)
     }
 }
 
@@ -43,31 +47,6 @@ struct SettingsRow<Content: View>: View {
     }
 }
 
-// @note tab button for settings toolbar
-struct SettingsTabButton: View {
-    let tab: SettingsTab
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: tab.icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(isSelected ? .accentColor : .secondary)
-                
-                Text(tab.rawValue)
-                    .font(.system(size: 11))
-                    .foregroundColor(isSelected ? .accentColor : .secondary)
-            }
-            .frame(width: 70, height: 50)
-            .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
-            .cornerRadius(6)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 // @note visual effect background for settings window
 struct SettingsVisualEffectBackground: NSViewRepresentable {
     var material: NSVisualEffectView.Material
@@ -87,26 +66,25 @@ struct SettingsVisualEffectBackground: NSViewRepresentable {
     }
 }
 
-// @note settings window with xcode-style tabbed layout
+// @note settings window content view (without toolbar, handled by NSToolbar)
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
-    @State private var selectedTab: SettingsTab = .general
+    @Binding var selectedTab: SettingsTab
     @State private var selectedTheme: AppTheme
     @State private var selectedHotkey: HotkeyOption
     @State private var launchAtLogin: Bool
     @State private var maxResults: Int
-    @State private var showDockIcon: Bool
     @State private var enableTransparency: Bool
     var onClose: (() -> Void)?
     
-    init(settings: AppSettings, onClose: (() -> Void)? = nil) {
+    init(settings: AppSettings, selectedTab: Binding<SettingsTab>, onClose: (() -> Void)? = nil) {
         self.settings = settings
+        self._selectedTab = selectedTab
         self.onClose = onClose
         self._selectedTheme = State(initialValue: settings.appTheme)
         self._selectedHotkey = State(initialValue: settings.hotkeyOption)
         self._launchAtLogin = State(initialValue: settings.launchAtLogin)
         self._maxResults = State(initialValue: settings.maxResults)
-        self._showDockIcon = State(initialValue: settings.showDockIcon)
         self._enableTransparency = State(initialValue: settings.enableTransparency)
     }
     
@@ -122,22 +100,6 @@ struct SettingsView: View {
             }
             
             VStack(spacing: 0) {
-                // @note tab toolbar
-                HStack(spacing: 4) {
-                    ForEach(SettingsTab.allCases, id: \.self) { tab in
-                        SettingsTabButton(
-                            tab: tab,
-                            isSelected: selectedTab == tab,
-                            action: { selectedTab = tab }
-                        )
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-                
-                Divider()
-                
                 // @note tab content
                 Group {
                     switch selectedTab {
@@ -149,6 +111,8 @@ struct SettingsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 
+                Spacer()
+                
                 // @note footer
                 Divider()
                 
@@ -159,7 +123,7 @@ struct SettingsView: View {
                     .padding(.vertical, 8)
             }
         }
-        .frame(width: 500, height: 340)
+        .frame(width: 450, height: 260)
         .onAppear {
             settings.syncLaunchAtLogin()
             launchAtLogin = settings.launchAtLogin
@@ -213,23 +177,6 @@ struct SettingsView: View {
                         settings.launchAtLogin = newValue
                     }
             }
-            
-            // @note show dock icon toggle
-            SettingsRow("Show in Dock:") {
-                HStack(spacing: 8) {
-                    Toggle("", isOn: $showDockIcon)
-                        .labelsHidden()
-                        .toggleStyle(.checkbox)
-                        .onChange(of: showDockIcon) { newValue in
-                            settings.showDockIcon = newValue
-                            NotificationCenter.default.post(name: .dockIconSettingDidChange, object: nil)
-                        }
-                    
-                    Text("When settings is open")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
-            }
         }
         .padding(.vertical, 20)
         .padding(.horizontal, 24)
@@ -278,5 +225,162 @@ struct SettingsView: View {
         }
         .padding(.vertical, 20)
         .padding(.horizontal, 24)
+    }
+}
+
+// @note NSToolbar delegate for settings window
+class SettingsToolbarDelegate: NSObject, NSToolbarDelegate {
+    var selectedTab: SettingsTab = .general
+    var onTabChange: ((SettingsTab) -> Void)?
+    
+    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        guard let tab = SettingsTab.allCases.first(where: { $0.toolbarIdentifier == itemIdentifier }) else {
+            return nil
+        }
+        
+        let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+        item.label = tab.rawValue
+        item.image = NSImage(systemSymbolName: tab.icon, accessibilityDescription: tab.rawValue)
+        item.target = self
+        item.action = #selector(toolbarItemClicked(_:))
+        
+        return item
+    }
+    
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        return [
+            .flexibleSpace,
+            SettingsTab.general.toolbarIdentifier,
+            SettingsTab.appearance.toolbarIdentifier,
+            .flexibleSpace
+        ]
+    }
+    
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        return toolbarDefaultItemIdentifiers(toolbar)
+    }
+    
+    func toolbarSelectableItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        return SettingsTab.allCases.map { $0.toolbarIdentifier }
+    }
+    
+    @objc private func toolbarItemClicked(_ sender: NSToolbarItem) {
+        guard let tab = SettingsTab.allCases.first(where: { $0.toolbarIdentifier == sender.itemIdentifier }) else {
+            return
+        }
+        selectedTab = tab
+        onTabChange?(tab)
+    }
+}
+
+// @note settings window controller to manage NSToolbar
+class SettingsWindowController: NSObject, NSWindowDelegate {
+    var window: NSWindow?
+    var toolbarDelegate: SettingsToolbarDelegate?
+    var hostingView: NSHostingView<SettingsView>?
+    var selectedTab: SettingsTab = .general
+    
+    // @note create and configure the settings window with NSToolbar
+    func createWindow() -> NSWindow {
+        // @note reuse existing window if available
+        if let existingWindow = window {
+            // @note refresh content view to ensure it displays properly
+            refreshContentView()
+            return existingWindow
+        }
+        
+        let newWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 260),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        
+        newWindow.title = "Saci Settings"
+        newWindow.isReleasedWhenClosed = false
+        newWindow.titlebarAppearsTransparent = false
+        newWindow.toolbarStyle = .preference
+        
+        // @note create toolbar
+        let toolbar = NSToolbar(identifier: "SettingsToolbar")
+        toolbar.displayMode = .iconAndLabel
+        
+        toolbarDelegate = SettingsToolbarDelegate()
+        toolbarDelegate?.selectedTab = selectedTab
+        toolbarDelegate?.onTabChange = { [weak self] tab in
+            self?.selectedTab = tab
+            self?.updateContent()
+        }
+        
+        toolbar.delegate = toolbarDelegate
+        toolbar.selectedItemIdentifier = selectedTab.toolbarIdentifier
+        newWindow.toolbar = toolbar
+        
+        // @note create content view
+        createContentView(for: newWindow)
+        
+        self.window = newWindow
+        return newWindow
+    }
+    
+    // @note update content view when tab changes
+    private func updateContent() {
+        guard let window = window else { return }
+        window.toolbar?.selectedItemIdentifier = selectedTab.toolbarIdentifier
+        refreshContentView()
+    }
+    
+    // @note create hosting view for the first time
+    private func createContentView(for window: NSWindow) {
+        let settings = AppSettings.shared
+        let binding = Binding<SettingsTab>(
+            get: { self.selectedTab },
+            set: { newValue in
+                self.selectedTab = newValue
+                self.toolbarDelegate?.selectedTab = newValue
+                self.window?.toolbar?.selectedItemIdentifier = newValue.toolbarIdentifier
+            }
+        )
+        
+        let settingsView = SettingsView(settings: settings, selectedTab: binding)
+        hostingView = NSHostingView(rootView: settingsView)
+        window.contentView = hostingView
+    }
+    
+    // @note refresh hosting view with new root view
+    private func refreshContentView() {
+        guard let window = window else { return }
+        
+        let settings = AppSettings.shared
+        let binding = Binding<SettingsTab>(
+            get: { self.selectedTab },
+            set: { newValue in
+                self.selectedTab = newValue
+                self.toolbarDelegate?.selectedTab = newValue
+                self.window?.toolbar?.selectedItemIdentifier = newValue.toolbarIdentifier
+            }
+        )
+        
+        let settingsView = SettingsView(settings: settings, selectedTab: binding)
+        
+        if let existingView = hostingView {
+            existingView.rootView = settingsView
+        } else {
+            hostingView = NSHostingView(rootView: settingsView)
+            window.contentView = hostingView
+        }
+    }
+    
+    // @note apply transparency to window
+    func applyTransparency() {
+        guard let window = window else { return }
+        let settings = AppSettings.shared
+        if settings.enableTransparency {
+            window.isOpaque = false
+            window.backgroundColor = .clear
+        } else {
+            window.isOpaque = true
+            window.backgroundColor = .windowBackgroundColor
+        }
     }
 }

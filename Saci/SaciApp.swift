@@ -43,7 +43,7 @@ class SaciPanel: NSPanel {
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     var hotkeyManager = HotkeyManager.shared
     var mainPanel: SaciPanel?
-    var settingsWindow: NSWindow?
+    var settingsWindowController: SettingsWindowController?
     var errorWindow: NSWindow?
     var statusItem: NSStatusItem?
     var localMouseEventMonitor: Any?
@@ -121,14 +121,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             object: nil
         )
         
-        // @note observe dock icon setting changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(dockIconSettingDidChange),
-            name: .dockIconSettingDidChange,
-            object: nil
-        )
-        
         // @note observe transparency setting changes
         NotificationCenter.default.addObserver(
             self,
@@ -150,11 +142,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     @objc private func themeDidChange() {
         // @note theme is already applied via AppSettings.applyTheme()
         // @note SwiftUI views update automatically via @Environment(\.colorScheme)
-    }
-    
-    // @note handle dock icon setting change
-    @objc private func dockIconSettingDidChange() {
-        updateDockIconVisibility()
     }
     
     // @note handle transparency setting change
@@ -195,16 +182,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note update settings window transparency based on setting
     private func updateSettingsWindowTransparency() {
-        guard let window = settingsWindow else { return }
-        applyWindowTransparency(to: window)
+        settingsWindowController?.applyTransparency()
     }
     
-    // @note update dock icon based on settings and window state
+    // @note update dock icon based on settings window visibility
     private func updateDockIconVisibility() {
-        let settings = AppSettings.shared
-        let settingsOpen = settingsWindow?.isVisible ?? false
+        let settingsVisible = settingsWindowController?.window?.isVisible ?? false
         
-        if settings.showDockIcon && settingsOpen {
+        if settingsVisible {
             NSApp.setActivationPolicy(.regular)
         } else {
             NSApp.setActivationPolicy(.accessory)
@@ -378,7 +363,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
                 
                 // @note don't hide if focus moved to our windows or popover
                 let isOurWindow = newKeyWindow == self.mainPanel ||
-                                  newKeyWindow == self.settingsWindow ||
+                                  newKeyWindow == self.settingsWindowController?.window ||
                                   newKeyWindow == self.errorWindow ||
                                   newKeyWindow?.parent == self.mainPanel ||
                                   isPopover
@@ -423,36 +408,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             self?.isTransitioningToChildWindow = false
         }
         
-        if let window = settingsWindow, window.isVisible {
+        if let window = settingsWindowController?.window, window.isVisible {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             if shouldHidePanel { hidePanel() }
             return
         }
         
-        let settings = AppSettings.shared
-        let settingsView = SettingsView(settings: settings, onClose: { [weak self] in
-            self?.closeSettings()
-        })
-        
-        if settingsWindow == nil {
-            settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 500, height: 340),
-                styleMask: [.titled, .closable, .fullSizeContentView],
-                backing: .buffered,
-                defer: false
-            )
-            settingsWindow?.title = "Saci Settings"
-            settingsWindow?.isReleasedWhenClosed = false
-            settingsWindow?.delegate = self
-            settingsWindow?.titlebarAppearsTransparent = true
+        // @note create settings window controller if needed
+        if settingsWindowController == nil {
+            settingsWindowController = SettingsWindowController()
         }
         
-        guard let window = settingsWindow else { return }
+        guard let controller = settingsWindowController else { return }
         
-        applyWindowTransparency(to: window)
+        let window = controller.createWindow()
+        window.delegate = self
+        controller.applyTransparency()
         
-        window.contentView = NSHostingView(rootView: settingsView)
         window.center()
         window.makeKeyAndOrderFront(nil)
         
@@ -466,16 +439,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note close settings window
     private func closeSettings() {
-        settingsWindow?.close()
+        settingsWindowController?.window?.close()
     }
     
     // @note handle window close events
     func windowWillClose(_ notification: Notification) {
         guard let closingWindow = notification.object as? NSWindow else { return }
         
-        if closingWindow == settingsWindow {
-            // @note hide dock icon when settings closes
-            updateDockIconVisibility()
+        if closingWindow == settingsWindowController?.window {
+            // @note hide dock icon directly since window is still visible at this point
+            NSApp.setActivationPolicy(.accessory)
         } else if closingWindow == errorWindow {
             // @note reset error manager state when error window closes
             ErrorManager.shared.dismiss()
@@ -560,5 +533,4 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
 extension Notification.Name {
     static let saciWindowDidHide = Notification.Name("saciWindowDidHide")
     static let saciWindowWillShow = Notification.Name("saciWindowWillShow")
-    static let dockIconSettingDidChange = Notification.Name("dockIconSettingDidChange")
 }
