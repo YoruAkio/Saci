@@ -25,7 +25,7 @@
 - macOS 13.7 or later
 - Xcode 15.2 (for building from source)
 
-> **Note**: This app was built and tested on macOS 13.7 using Xcode 15.2.
+> **Note**: This app was built and tested on macOS 13.7 using Xcode 15.2. For Saci v0.4.1-alpha+, it was built and tested on macOS 15.7.3 using Xcode 26.2.
 
 ## Installation
 
