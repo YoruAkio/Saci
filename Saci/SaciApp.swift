@@ -108,6 +108,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         }
         hotkeyManager.register()
         
+        // @note start performance monitoring in debug builds only
+        #if DEBUG
+        PerformanceMonitor.shared.startMonitoring(interval: 3.0)
+        #endif
+        
         // @note observe theme changes
         NotificationCenter.default.addObserver(
             self,
@@ -543,6 +548,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         }
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
+        
+        // @note stop performance monitoring in debug builds
+        #if DEBUG
+        PerformanceMonitor.shared.stopMonitoring()
+        #endif
     }
 }
 

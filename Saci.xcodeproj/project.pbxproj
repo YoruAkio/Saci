@@ -15,6 +15,8 @@
 		66E08C112F119A000078F2AC /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0B2F119A000078F2AC /* AppSettings.swift */; };
 		66E08C122F119A000078F2AC /* AppSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0C2F119A000078F2AC /* AppSearchService.swift */; };
 		66E08C132F119A000078F2AC /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0D2F119A000078F2AC /* HotkeyManager.swift */; };
+		1C0F168F821A429E8A50DAC6 /* PerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA12953C1CAC48D786A0E3A9 /* PerformanceMonitor.swift */; };
+		D69DBFE640334521877BD073 /* IconCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD574301DDD4D688E66A993 /* IconCacheService.swift */; };
 		66E08C142F119A000078F2AC /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C062F119A000078F2AC /* SearchBarView.swift */; };
 		66E08C152F119A000078F2AC /* ResultRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C072F119A000078F2AC /* ResultRowView.swift */; };
 		66E08C162F119A000078F2AC /* ResultsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C082F119A000078F2AC /* ResultsListView.swift */; };
@@ -40,6 +42,8 @@
 		66E08C0B2F119A000078F2AC /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		66E08C0C2F119A000078F2AC /* AppSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchService.swift; sourceTree = "<group>"; };
 		66E08C0D2F119A000078F2AC /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		BA12953C1CAC48D786A0E3A9 /* PerformanceMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
+		6FD574301DDD4D688E66A993 /* IconCacheService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IconCacheService.swift; sourceTree = "<group>"; };
 		66E08C1C2F11A0000078F2AC /* ErrorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorManager.swift; sourceTree = "<group>"; };
 		66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorWindowView.swift; sourceTree = "<group>"; };
 		66E08C212F11B0000078F2AC /* CalculatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorService.swift; sourceTree = "<group>"; };
@@ -123,6 +127,8 @@
 			children = (
 				66E08C0C2F119A000078F2AC /* AppSearchService.swift */,
 				66E08C0D2F119A000078F2AC /* HotkeyManager.swift */,
+				BA12953C1CAC48D786A0E3A9 /* PerformanceMonitor.swift */,
+				6FD574301DDD4D688E66A993 /* IconCacheService.swift */,
 				66E08C1C2F11A0000078F2AC /* ErrorManager.swift */,
 				66E08C212F11B0000078F2AC /* CalculatorService.swift */,
 			);
@@ -205,6 +211,8 @@
 				66E08C112F119A000078F2AC /* AppSettings.swift in Sources */,
 				66E08C122F119A000078F2AC /* AppSearchService.swift in Sources */,
 				66E08C132F119A000078F2AC /* HotkeyManager.swift in Sources */,
+				1C0F168F821A429E8A50DAC6 /* PerformanceMonitor.swift in Sources */,
+				D69DBFE640334521877BD073 /* IconCacheService.swift in Sources */,
 				66E08C142F119A000078F2AC /* SearchBarView.swift in Sources */,
 				66E08C152F119A000078F2AC /* ResultRowView.swift in Sources */,
 				66E08C162F119A000078F2AC /* ResultsListView.swift in Sources */,

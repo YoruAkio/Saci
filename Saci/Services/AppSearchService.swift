@@ -25,7 +25,7 @@ class AppSearchService: ObservableObject {
     
     // @note debounce search to avoid excessive filtering
     private var searchWorkItem: DispatchWorkItem?
-    private let searchDebounceMs: Int = 50
+    private let searchDebounceMs: Int = 100
     
     // @note file system monitoring for automatic app detection
     private var eventStream: FSEventStreamRef?
@@ -226,9 +226,11 @@ class AppSearchService: ObservableObject {
     
     // @note filter apps based on search query with debounce
     // @param query search text to filter
-    func search(query: String) {
-        // @note cancel previous search
+    // @param maxResults maximum results to return (for early termination)
+    func search(query: String, maxResults: Int = 20) {
+        // @note cancel previous search and pending icon loads
         searchWorkItem?.cancel()
+        IconCacheService.shared.cancelPendingLoads()
         
         if query.isEmpty {
             results = []
@@ -238,14 +240,23 @@ class AppSearchService: ObservableObject {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             
-            let lowercasedQuery = query.lowercased()
-            
             // @note thread-safe read of allApps
             let apps = self.appsQueue.sync { self.allApps }
             
-            // @note filter on background queue
-            let filtered = apps.filter { app in
-                app.name.lowercased().contains(lowercasedQuery)
+            // @note limit for early termination (get extra for better ranking)
+            let limit = maxResults + 5
+            
+            // @note filter with early termination and case-insensitive matching
+            var filtered: [SearchResult] = []
+            filtered.reserveCapacity(limit)
+            
+            for app in apps {
+                // @note use range(of:options:) for case-insensitive without allocation
+                if app.name.range(of: query, options: .caseInsensitive) != nil {
+                    filtered.append(app)
+                    // @note stop early once we have enough results
+                    if filtered.count >= limit { break }
+                }
             }
             
             // @note update results on main thread

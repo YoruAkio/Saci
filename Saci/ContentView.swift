@@ -167,6 +167,9 @@ struct ContentView: View {
     @State private var showCopiedFeedback = false
     @Environment(\.colorScheme) var colorScheme
     
+    // @note debounce work item for calculator
+    @State private var calculatorWorkItem: DispatchWorkItem?
+    
     var onEscape: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     
@@ -331,16 +334,37 @@ struct ContentView: View {
             
             // @note clear results and calculator if search text is empty
             if newValue.isEmpty {
+                calculatorWorkItem?.cancel()
                 calculatorResult = nil
                 selectedIndex = 0
                 showCopiedFeedback = false
                 searchService.clearResults()
             } else {
-                searchService.search(query: newValue)
-                // @note evaluate calculator expression
-                calculatorResult = CalculatorService.shared.evaluate(newValue)
-                // @note reset selection: -1 if calculator result exists, 0 otherwise
-                selectedIndex = calculatorResult != nil ? -1 : 0
+                // @note search with maxResults for early termination
+                searchService.search(query: newValue, maxResults: settings.maxResults)
+                
+                // @note cancel previous calculator work
+                calculatorWorkItem?.cancel()
+                
+                // @note evaluate calculator expression with debounce
+                let query = newValue
+                let workItem = DispatchWorkItem {
+                    let calcResult = CalculatorService.shared.evaluate(query)
+                    DispatchQueue.main.async {
+                        // @note only update if search text hasn't changed
+                        guard searchText == query else { return }
+                        calculatorResult = calcResult
+                        // @note reset selection: -1 if calculator result exists, 0 otherwise
+                        if calcResult != nil && selectedIndex >= 0 {
+                            selectedIndex = -1
+                        } else if calcResult == nil && selectedIndex < 0 {
+                            selectedIndex = 0
+                        }
+                    }
+                }
+                calculatorWorkItem = workItem
+                DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: .now() + .milliseconds(80), execute: workItem)
+                
                 showCopiedFeedback = false
             }
         }

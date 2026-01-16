@@ -21,6 +21,7 @@ struct ResultsListView: View {
                         isSelected: index == selectedIndex,
                         index: index
                     )
+                    .equatable()
                     .onTapGesture {
                         onSelect(result)
                     }

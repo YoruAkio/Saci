@@ -10,13 +10,11 @@ struct SearchResult: Identifiable, Hashable {
     let id: String
     let name: String
     let path: String
-    var icon: NSImage?
     
-    init(name: String, path: String, icon: NSImage? = nil) {
+    init(name: String, path: String) {
         self.id = path
         self.name = name
         self.path = path
-        self.icon = icon
     }
     
     func hash(into hasher: inout Hasher) {
@@ -34,10 +32,9 @@ struct CachedApp: Codable {
     let path: String
     let modificationDate: Date
     
-    // @note convert to SearchResult with icon loaded
+    // @note convert to SearchResult (icon loaded separately via IconCacheService)
     func toSearchResult() -> SearchResult {
-        let icon = NSWorkspace.shared.icon(forFile: path)
-        return SearchResult(name: name, path: path, icon: icon)
+        return SearchResult(name: name, path: path)
     }
 }
 
