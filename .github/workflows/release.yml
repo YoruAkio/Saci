@@ -2,11 +2,6 @@ name: Build and Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version number (e.g., 0.5.0-alpha)'
-        required: true
-        type: string
 
 jobs:
   build:
@@ -21,6 +16,13 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep -m1 'MARKETING_VERSION' Saci.xcodeproj/project.pbxproj | sed 's/.*= \(.*\);/\1/' | tr -d ' ')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
 
       - name: Build app
         run: |
@@ -42,16 +44,16 @@ jobs:
       - name: Zip app
         run: |
           cd export
-          zip -r ../Saci-${{ inputs.version }}.zip Saci.app
+          zip -r ../Saci-${{ steps.version.outputs.version }}.zip Saci.app
           cd ..
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
-          name: Saci v${{ inputs.version }}
-          files: Saci-${{ inputs.version }}.zip
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Saci v${{ steps.version.outputs.version }}
+          files: Saci-${{ steps.version.outputs.version }}.zip
           draft: false
-          prerelease: ${{ contains(inputs.version, 'alpha') || contains(inputs.version, 'beta') }}
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
