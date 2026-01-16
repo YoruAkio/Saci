@@ -29,6 +29,10 @@
 
 ## Installation
 
+### Pre-Built Binary
+
+You can download the latest pre-built binary from the [Releases](https://github.com/YoruAkio/Saci/releases) page.
+
 ### Build from Source
 
 ```bash
@@ -38,8 +42,6 @@ xcodebuild -project Saci.xcodeproj -scheme Saci -configuration Release build
 ```
 
 The built app will be in the `build/` directory.
-
-> **Note**: The pre-build app it's not ready for distribution yet. You can build it from source if you want to try it out.
 
 ## Basic Usage
 
