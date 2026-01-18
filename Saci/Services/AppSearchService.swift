@@ -224,6 +224,15 @@ class AppSearchService: ObservableObject {
         return apps
     }
     
+    // @note get top apps sorted alphabetically
+    // @param limit maximum number of apps to return
+    // @return array of top apps
+    func getTopApps(limit: Int) -> [SearchResult] {
+        return appsQueue.sync {
+            Array(allApps.prefix(limit))
+        }
+    }
+    
     // @note filter apps based on search query with debounce
     // @param query search text to filter
     // @param maxResults maximum results to return (for early termination)
@@ -233,7 +242,8 @@ class AppSearchService: ObservableObject {
         IconCacheService.shared.cancelPendingLoads()
         
         if query.isEmpty {
-            results = []
+            // @note show top apps when query is empty
+            results = getTopApps(limit: maxResults)
             return
         }
         

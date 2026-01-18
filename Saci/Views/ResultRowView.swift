@@ -46,15 +46,15 @@ private struct ResultRowContent: View {
             // @note app icon (lazy loaded)
             iconView
             
-            VStack(alignment: .leading, spacing: 2) {
+            // @note app name with "Application" suffix
+            HStack(spacing: 4) {
                 Text(result.name)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.primary)
                 
-                Text(result.path)
-                    .font(.system(size: 11))
+                Text("Application")
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.secondary)
-                    .lineLimit(1)
             }
             
             Spacer()
@@ -97,12 +97,12 @@ private struct ResultRowContent: View {
         if let loadedIcon = icon {
             Image(nsImage: loadedIcon)
                 .resizable()
-                .frame(width: 32, height: 32)
+                .frame(width: 24, height: 24)
         } else {
             // @note placeholder while loading
             Image(systemName: "app.fill")
                 .resizable()
-                .frame(width: 32, height: 32)
+                .frame(width: 24, height: 24)
                 .foregroundColor(.secondary)
         }
     }

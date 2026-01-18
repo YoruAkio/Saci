@@ -331,17 +331,15 @@ struct ContentView: View {
                 return
             }
             
-            // @note clear results and calculator if search text is empty
+            // @note always search (empty query returns top apps)
+            searchService.search(query: newValue, maxResults: settings.maxResults)
+            
             if newValue.isEmpty {
                 calculatorWorkItem?.cancel()
                 calculatorResult = nil
                 selectedIndex = 0
                 showCopiedFeedback = false
-                searchService.clearResults()
             } else {
-                // @note search with maxResults for early termination
-                searchService.search(query: newValue, maxResults: settings.maxResults)
-                
                 // @note cancel previous calculator work
                 calculatorWorkItem?.cancel()
                 
@@ -366,6 +364,11 @@ struct ContentView: View {
                 
                 showCopiedFeedback = false
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .saciWindowWillShow)) { _ in
+            // @note show top apps when window opens
+            searchService.search(query: "", maxResults: settings.maxResults)
+            selectedIndex = 0
         }
         .onReceive(NotificationCenter.default.publisher(for: .saciWindowDidHide)) { _ in
             // @note clear search when window is hidden

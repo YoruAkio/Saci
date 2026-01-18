@@ -462,15 +462,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         // @note notify that panel will show (for state reset)
         NotificationCenter.default.post(name: .saciWindowWillShow, object: nil)
         
-        // @note position panel in upper third of screen using initial height (search bar only)
         // @note use fixed initial height to ensure consistent positioning
         let initialHeight: CGFloat = 100
+        
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
             let panelWidth = panel.frame.width
-            let x = screenFrame.midX - panelWidth / 2
-            let y = screenFrame.minY + screenFrame.height * 0.73
-            panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: initialHeight), display: false)
+            
+            // @note calculate center position of screen
+            let centerX = screenFrame.midX - panelWidth / 2
+            let screenCenterY = screenFrame.midY
+            
+            // @note move down from center by 15% of screen height
+            let windowCenterY = screenCenterY - (screenFrame.height * 0.15)
+            
+            panel.setFrame(NSRect(x: centerX, y: windowCenterY, width: panelWidth, height: initialHeight), display: false)
         } else {
             panel.center()
         }
