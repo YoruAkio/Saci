@@ -71,6 +71,39 @@ enum HotkeyOption: String, CaseIterable {
     }
 }
 
+// @note emoji library hotkey options
+enum EmojiHotkeyOption: String, CaseIterable {
+    case none = "none"
+    case optionE = "optionE"
+    case commandE = "commandE"
+    case controlE = "controlE"
+    
+    var displayName: String {
+        switch self {
+        case .none: return "None"
+        case .optionE: return "⌥ E"
+        case .commandE: return "⌘ E"
+        case .controlE: return "⌃ E"
+        }
+    }
+    
+    var modifierKey: UInt32? {
+        switch self {
+        case .none: return nil
+        case .optionE: return UInt32(Carbon.optionKey)
+        case .commandE: return UInt32(Carbon.cmdKey)
+        case .controlE: return UInt32(Carbon.controlKey)
+        }
+    }
+    
+    var keyCode: UInt32? {
+        switch self {
+        case .none: return nil
+        case .optionE, .commandE, .controlE: return 14
+        }
+    }
+}
+
 // @note user preferences model using AppStorage
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
@@ -83,6 +116,7 @@ class AppSettings: ObservableObject {
     @AppStorage("maxResults") var maxResults: Int = 8
     @AppStorage("appTheme") var appThemeRaw: String = AppTheme.system.rawValue
     @AppStorage("hotkeyOption") var hotkeyOptionRaw: String = HotkeyOption.optionSpace.rawValue
+    @AppStorage("emojiHotkeyOption") var emojiHotkeyOptionRaw: String = EmojiHotkeyOption.none.rawValue
     @AppStorage("enableTransparency") var enableTransparency: Bool = true {
         didSet {
             NotificationCenter.default.post(name: .transparencyDidChange, object: nil)
@@ -102,6 +136,14 @@ class AppSettings: ObservableObject {
         set {
             hotkeyOptionRaw = newValue.rawValue
             NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
+    
+    var emojiHotkeyOption: EmojiHotkeyOption {
+        get { EmojiHotkeyOption(rawValue: emojiHotkeyOptionRaw) ?? .none }
+        set {
+            emojiHotkeyOptionRaw = newValue.rawValue
+            NotificationCenter.default.post(name: .emojiHotkeyDidChange, object: nil)
         }
     }
     
@@ -142,6 +184,7 @@ class AppSettings: ObservableObject {
 // @note notification names
 extension Notification.Name {
     static let hotkeyDidChange = Notification.Name("hotkeyDidChange")
+    static let emojiHotkeyDidChange = Notification.Name("emojiHotkeyDidChange")
     static let themeDidChange = Notification.Name("themeDidChange")
     static let transparencyDidChange = Notification.Name("transparencyDidChange")
 }

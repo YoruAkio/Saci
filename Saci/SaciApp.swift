@@ -49,6 +49,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     var localMouseEventMonitor: Any?
     var globalEventMonitor: Any?
     private var errorCancellable: AnyCancellable?
+    private var panelHeight: CGFloat = 100
     
     // @note flag to prevent panel closing when transitioning to child windows (settings, etc.)
     private var isTransitioningToChildWindow = false
@@ -103,8 +104,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         setupErrorObserver()
         
         // @note register global hotkey
-        hotkeyManager.onHotkeyPressed = { [weak self] in
+        hotkeyManager.onMainHotkeyPressed = { [weak self] in
             self?.togglePanel()
+        }
+        hotkeyManager.onEmojiHotkeyPressed = { [weak self] in
+            self?.showEmojiLibrary()
         }
         hotkeyManager.register()
         
@@ -126,6 +130,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             self,
             selector: #selector(transparencyDidChange),
             name: .transparencyDidChange,
+            object: nil
+        )
+        
+        // @note observe emoji library mode changes for panel resize
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(emojiLibraryDidEnter),
+            name: .emojiLibraryDidEnter,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(emojiLibraryDidExit),
+            name: .emojiLibraryDidExit,
             object: nil
         )
         
@@ -462,8 +480,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         // @note notify that panel will show (for state reset)
         NotificationCenter.default.post(name: .saciWindowWillShow, object: nil)
         
-        // @note use fixed initial height to ensure consistent positioning
-        let initialHeight: CGFloat = 100
+        // @note use stored height to ensure consistent positioning
+        let initialHeight: CGFloat = panelHeight
         
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
@@ -488,6 +506,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     private func hidePanel() {
         mainPanel?.orderOut(nil)
         NotificationCenter.default.post(name: .saciWindowDidHide, object: nil)
+        panelHeight = 100
+    }
+
+    // @note resize panel for emoji library
+    @objc private func emojiLibraryDidEnter() {
+        panelHeight = 460
+        resizePanel(height: panelHeight)
+    }
+    
+    // @note resize panel back to default
+    @objc private func emojiLibraryDidExit() {
+        panelHeight = 100
+        resizePanel(height: panelHeight)
+    }
+    
+    // @note resize panel while keeping position
+    // @param height desired panel height
+    private func resizePanel(height: CGFloat) {
+        guard let panel = mainPanel else { return }
+        let currentFrame = panel.frame
+        let newFrame = NSRect(
+            x: currentFrame.origin.x,
+            y: currentFrame.origin.y - (height - currentFrame.height),
+            width: currentFrame.width,
+            height: height
+        )
+        panel.setFrame(newFrame, display: true, animate: true)
     }
     
     // @note toggle from menu item
@@ -504,6 +549,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         } else {
             showPanel()
         }
+    }
+    
+    // @note show emoji library directly
+    private func showEmojiLibrary() {
+        panelHeight = 460
+        if mainPanel?.isVisible != true {
+            showPanel()
+        }
+        NotificationCenter.default.post(name: .emojiLibraryRequested, object: nil)
     }
     
     // @note quit the application
@@ -539,4 +593,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
 extension Notification.Name {
     static let saciWindowDidHide = Notification.Name("saciWindowDidHide")
     static let saciWindowWillShow = Notification.Name("saciWindowWillShow")
+    static let emojiLibraryRequested = Notification.Name("emojiLibraryRequested")
+    static let emojiLibraryDidEnter = Notification.Name("emojiLibraryDidEnter")
+    static let emojiLibraryDidExit = Notification.Name("emojiLibraryDidExit")
 }

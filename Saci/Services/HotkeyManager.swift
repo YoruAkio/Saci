@@ -11,10 +11,12 @@ class HotkeyManager: ObservableObject {
     static let shared = HotkeyManager()
     
     private var eventHandler: EventHandlerRef?
-    private var hotKeyRef: EventHotKeyRef?
+    private var mainHotKeyRef: EventHotKeyRef?
+    private var emojiHotKeyRef: EventHotKeyRef?
     private var retainedSelf: Unmanaged<HotkeyManager>?
     
-    var onHotkeyPressed: (() -> Void)?
+    var onMainHotkeyPressed: (() -> Void)?
+    var onEmojiHotkeyPressed: (() -> Void)?
     
     private init() {
         // @note observe hotkey changes
@@ -22,6 +24,13 @@ class HotkeyManager: ObservableObject {
             self,
             selector: #selector(hotkeyDidChange),
             name: .hotkeyDidChange,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(hotkeyDidChange),
+            name: .emojiHotkeyDidChange,
             object: nil
         )
     }
@@ -35,7 +44,8 @@ class HotkeyManager: ObservableObject {
     // @note register global hotkey based on settings
     func register() {
         let settings = AppSettings.shared
-        let hotKeyID = EventHotKeyID(signature: OSType(0x53414349), id: 1) // "SACI"
+        let mainHotKeyID = EventHotKeyID(signature: OSType(0x53414349), id: 1) // "SACI"
+        let emojiHotKeyID = EventHotKeyID(signature: OSType(0x53414349), id: 2) // "SACI"
         
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         
@@ -60,15 +70,15 @@ class HotkeyManager: ObservableObject {
             return
         }
         
-        // @note register hotkey with modifier from settings (keycode 49 = space)
-        var hotKeyRefTemp: EventHotKeyRef?
+        // @note register main hotkey with modifier from settings (keycode 49 = space)
+        var mainHotKeyRefTemp: EventHotKeyRef?
         let registerStatus = RegisterEventHotKey(
             49,
             settings.hotkeyOption.modifierKey,
-            hotKeyID,
+            mainHotKeyID,
             GetApplicationEventTarget(),
             0,
-            &hotKeyRefTemp
+            &mainHotKeyRefTemp
         )
         
         if registerStatus != noErr {
@@ -83,14 +93,39 @@ class HotkeyManager: ObservableObject {
             return
         }
         
-        hotKeyRef = hotKeyRefTemp
+        mainHotKeyRef = mainHotKeyRefTemp
+        
+        // @note register emoji hotkey if enabled
+        if let modifier = settings.emojiHotkeyOption.modifierKey,
+           let keyCode = settings.emojiHotkeyOption.keyCode {
+            var emojiHotKeyRefTemp: EventHotKeyRef?
+            let emojiStatus = RegisterEventHotKey(
+                keyCode,
+                modifier,
+                emojiHotKeyID,
+                GetApplicationEventTarget(),
+                0,
+                &emojiHotKeyRefTemp
+            )
+            
+            if emojiStatus == noErr {
+                emojiHotKeyRef = emojiHotKeyRefTemp
+            } else {
+                ErrorManager.shared.report(.hotkeyRegistrationFailed(code: emojiStatus))
+            }
+        }
     }
     
     // @note unregister hotkey
     func unregister() {
-        if let hotKeyRef = hotKeyRef {
+        if let hotKeyRef = mainHotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
+            self.mainHotKeyRef = nil
+        }
+        
+        if let hotKeyRef = emojiHotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.emojiHotKeyRef = nil
         }
         
         if let eventHandler = eventHandler {
@@ -122,7 +157,31 @@ private func hotkeyEventHandler(
     let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
     
     DispatchQueue.main.async {
-        manager.onHotkeyPressed?()
+        var hotKeyID = EventHotKeyID()
+        if let event = event {
+            let status = GetEventParameter(
+                event,
+                EventParamName(kEventParamDirectObject),
+                EventParamType(typeEventHotKeyID),
+                nil,
+                MemoryLayout<EventHotKeyID>.size,
+                nil,
+                &hotKeyID
+            )
+            
+            if status == noErr {
+                if hotKeyID.id == 1 {
+                    manager.onMainHotkeyPressed?()
+                    return
+                }
+                if hotKeyID.id == 2 {
+                    manager.onEmojiHotkeyPressed?()
+                    return
+                }
+            }
+        }
+        
+        manager.onMainHotkeyPressed?()
     }
     
     return noErr
