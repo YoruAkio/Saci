@@ -9,11 +9,13 @@ import SwiftUI
 enum SettingsTab: String, CaseIterable {
     case general = "General"
     case appearance = "Appearance"
+    case shortcut = "Shortcut"
     
     var icon: String {
         switch self {
         case .general: return "gearshape"
         case .appearance: return "paintbrush"
+        case .shortcut: return "keyboard"
         }
     }
     
@@ -72,6 +74,7 @@ struct SettingsView: View {
     @Binding var selectedTab: SettingsTab
     @State private var selectedTheme: AppTheme
     @State private var selectedHotkey: HotkeyOption
+    @State private var selectedEmojiHotkey: EmojiHotkeyOption
     @State private var launchAtLogin: Bool
     @State private var maxResults: Int
     @State private var enableTransparency: Bool
@@ -83,6 +86,7 @@ struct SettingsView: View {
         self.onClose = onClose
         self._selectedTheme = State(initialValue: settings.appTheme)
         self._selectedHotkey = State(initialValue: settings.hotkeyOption)
+        self._selectedEmojiHotkey = State(initialValue: settings.emojiHotkeyOption)
         self._launchAtLogin = State(initialValue: settings.launchAtLogin)
         self._maxResults = State(initialValue: settings.maxResults)
         self._enableTransparency = State(initialValue: settings.enableTransparency)
@@ -107,6 +111,8 @@ struct SettingsView: View {
                         generalTab
                     case .appearance:
                         appearanceTab
+                    case .shortcut:
+                        shortcutTab
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -226,6 +232,34 @@ struct SettingsView: View {
         .padding(.vertical, 20)
         .padding(.horizontal, 24)
     }
+    
+    // @note shortcut settings tab content
+    private var shortcutTab: some View {
+        VStack(spacing: 12) {
+            // @note emoji library hotkey picker
+            SettingsRow("Emoji Library:") {
+                Picker("", selection: $selectedEmojiHotkey) {
+                    ForEach(EmojiHotkeyOption.allCases, id: \.self) { option in
+                        Text(option.displayName).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 180)
+                .onChange(of: selectedEmojiHotkey) { newValue in
+                    settings.emojiHotkeyOption = newValue
+                }
+            }
+            
+            SettingsRow("") {
+                Text("Set a shortcut to open the Emoji Library directly.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 24)
+    }
 }
 
 // @note NSToolbar delegate for settings window
@@ -252,6 +286,7 @@ class SettingsToolbarDelegate: NSObject, NSToolbarDelegate {
             .flexibleSpace,
             SettingsTab.general.toolbarIdentifier,
             SettingsTab.appearance.toolbarIdentifier,
+            SettingsTab.shortcut.toolbarIdentifier,
             .flexibleSpace
         ]
     }

@@ -5,16 +5,34 @@
 
 import SwiftUI
 
-// @note model for app search result item
+// @note result kind for launcher items
+enum SearchResultKind: String, Hashable {
+    case app
+    case command
+}
+
+// @note model for search result item
 struct SearchResult: Identifiable, Hashable {
     let id: String
     let name: String
     let path: String
+    let kind: SearchResultKind
+    let subtitle: String
+    let iconSystemName: String?
     
-    init(name: String, path: String) {
+    init(
+        name: String,
+        path: String,
+        kind: SearchResultKind = .app,
+        subtitle: String = "Application",
+        iconSystemName: String? = nil
+    ) {
         self.id = path
         self.name = name
         self.path = path
+        self.kind = kind
+        self.subtitle = subtitle
+        self.iconSystemName = iconSystemName
     }
     
     func hash(into hasher: inout Hasher) {
@@ -23,6 +41,16 @@ struct SearchResult: Identifiable, Hashable {
     
     static func == (lhs: SearchResult, rhs: SearchResult) -> Bool {
         lhs.id == rhs.id
+    }
+    
+    static func emojiLibraryCommand() -> SearchResult {
+        SearchResult(
+            name: "Emoji Library",
+            path: "command://emoji-library",
+            kind: .command,
+            subtitle: "Command",
+            iconSystemName: "face.smiling"
+        )
     }
 }
 

@@ -11,6 +11,7 @@
 		66E08BFA2F1193B50078F2AC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08BF92F1193B50078F2AC /* ContentView.swift */; };
 		66E08BFC2F1193B70078F2AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 66E08BFB2F1193B70078F2AC /* Assets.xcassets */; };
 		66E08BFF2F1193B70078F2AC /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 66E08BFE2F1193B70078F2AC /* Preview Assets.xcassets */; };
+		9F3A1C569B2A4D1E9F0A1234 /* emoji-test.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9F3A1C559B2A4D1E9F0A1234 /* emoji-test.txt */; };
 		66E08C102F119A000078F2AC /* SearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0A2F119A000078F2AC /* SearchResult.swift */; };
 		66E08C112F119A000078F2AC /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0B2F119A000078F2AC /* AppSettings.swift */; };
 		66E08C122F119A000078F2AC /* AppSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C0C2F119A000078F2AC /* AppSearchService.swift */; };
@@ -26,6 +27,9 @@
 		66E08C1D2F11A0000078F2AC /* ErrorWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */; };
 		66E08C202F11B0000078F2AC /* CalculatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C212F11B0000078F2AC /* CalculatorService.swift */; };
 		66E08C222F11B0000078F2AC /* CalculatorResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E08C232F11B0000078F2AC /* CalculatorResultView.swift */; };
+		9F3A1C3E9B2A4D1E9F0A1234 /* EmojiEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3A1C3D9B2A4D1E9F0A1234 /* EmojiEntry.swift */; };
+		9F3A1C409B2A4D1E9F0A1234 /* EmojiLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3A1C3F9B2A4D1E9F0A1234 /* EmojiLibraryService.swift */; };
+		9F3A1C429B2A4D1E9F0A1234 /* EmojiGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3A1C419B2A4D1E9F0A1234 /* EmojiGridView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +38,7 @@
 		66E08BF92F1193B50078F2AC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		66E08BFB2F1193B70078F2AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		66E08BFE2F1193B70078F2AC /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		9F3A1C559B2A4D1E9F0A1234 /* emoji-test.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Resources/Emoji/emoji-test.txt"; sourceTree = "<group>"; };
 		66E08C002F1193B70078F2AC /* Saci.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Saci.entitlements; sourceTree = "<group>"; };
 		66E08C062F119A000078F2AC /* SearchBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBarView.swift; sourceTree = "<group>"; };
 		66E08C072F119A000078F2AC /* ResultRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRowView.swift; sourceTree = "<group>"; };
@@ -50,6 +55,9 @@
 		66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorWindowView.swift; sourceTree = "<group>"; };
 		66E08C212F11B0000078F2AC /* CalculatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorService.swift; sourceTree = "<group>"; };
 		66E08C232F11B0000078F2AC /* CalculatorResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorResultView.swift; sourceTree = "<group>"; };
+		9F3A1C3D9B2A4D1E9F0A1234 /* EmojiEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiEntry.swift; sourceTree = "<group>"; };
+		9F3A1C3F9B2A4D1E9F0A1234 /* EmojiLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiLibraryService.swift; sourceTree = "<group>"; };
+		9F3A1C419B2A4D1E9F0A1234 /* EmojiGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiGridView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +96,7 @@
 				66E08C192F119A100078F2AC /* Models */,
 				66E08C1A2F119A100078F2AC /* Services */,
 				66E08BFB2F1193B70078F2AC /* Assets.xcassets */,
+				9F3A1C559B2A4D1E9F0A1234 /* emoji-test.txt */,
 				66E08C002F1193B70078F2AC /* Saci.entitlements */,
 				66E08BFD2F1193B70078F2AC /* Preview Content */,
 			);
@@ -111,6 +120,7 @@
 				66E08C092F119A000078F2AC /* SettingsView.swift */,
 				66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */,
 				66E08C232F11B0000078F2AC /* CalculatorResultView.swift */,
+				9F3A1C419B2A4D1E9F0A1234 /* EmojiGridView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -120,6 +130,7 @@
 			children = (
 				66E08C0A2F119A000078F2AC /* SearchResult.swift */,
 				66E08C0B2F119A000078F2AC /* AppSettings.swift */,
+				9F3A1C3D9B2A4D1E9F0A1234 /* EmojiEntry.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -134,6 +145,7 @@
 				F2E1D0C9B8A7F6E5D4C3B2A1 /* FuzzySearchService.swift */,
 				66E08C1C2F11A0000078F2AC /* ErrorManager.swift */,
 				66E08C212F11B0000078F2AC /* CalculatorService.swift */,
+				9F3A1C3F9B2A4D1E9F0A1234 /* EmojiLibraryService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -198,6 +210,7 @@
 			files = (
 				66E08BFF2F1193B70078F2AC /* Preview Assets.xcassets in Resources */,
 				66E08BFC2F1193B70078F2AC /* Assets.xcassets in Resources */,
+				9F3A1C569B2A4D1E9F0A1234 /* emoji-test.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,6 +238,9 @@
 				66E08C1D2F11A0000078F2AC /* ErrorWindowView.swift in Sources */,
 				66E08C202F11B0000078F2AC /* CalculatorService.swift in Sources */,
 				66E08C222F11B0000078F2AC /* CalculatorResultView.swift in Sources */,
+				9F3A1C3E9B2A4D1E9F0A1234 /* EmojiEntry.swift in Sources */,
+				9F3A1C409B2A4D1E9F0A1234 /* EmojiLibraryService.swift in Sources */,
+				9F3A1C429B2A4D1E9F0A1234 /* EmojiGridView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -368,7 +384,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.5.3-alpha;
+				MARKETING_VERSION = 0.6.2-alpha;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yoruakio.Saci;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -395,7 +411,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.5.3-alpha;
+				MARKETING_VERSION = 0.5.4-alpha;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yoruakio.Saci;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

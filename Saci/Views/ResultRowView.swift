@@ -43,36 +43,38 @@ private struct ResultRowContent: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // @note app icon (lazy loaded)
+            // @note icon (lazy loaded for apps)
             iconView
             
-            // @note app name with "Application" suffix
+            // @note item name with subtitle
             HStack(spacing: 4) {
                 Text(result.name)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.primary)
                 
-                Text("Application")
+                Text(result.subtitle)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            // @note keybind hint (⌘ + number)
-            HStack(spacing: 2) {
-                Text("⌘")
-                    .font(.system(size: 11, weight: .medium))
-                Text("\(index + 1)")
-                    .font(.system(size: 11, weight: .medium))
+            // @note keybind hint (⌘ + number) for apps only
+            if result.kind == .app {
+                HStack(spacing: 2) {
+                    Text("⌘")
+                        .font(.system(size: 11, weight: .medium))
+                    Text("\(index + 1)")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundColor(.secondary)
+                .frame(minWidth: 28, minHeight: 20)
+                .padding(.horizontal, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.secondary.opacity(0.15))
+                )
             }
-            .foregroundColor(.secondary)
-            .frame(minWidth: 28, minHeight: 20)
-            .padding(.horizontal, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.secondary.opacity(0.15))
-            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -94,7 +96,12 @@ private struct ResultRowContent: View {
     // @note icon view with placeholder
     @ViewBuilder
     private var iconView: some View {
-        if let loadedIcon = icon {
+        if result.kind == .command {
+            Image(systemName: result.iconSystemName ?? "command")
+                .resizable()
+                .frame(width: 22, height: 22)
+                .foregroundColor(.secondary)
+        } else if let loadedIcon = icon {
             Image(nsImage: loadedIcon)
                 .resizable()
                 .frame(width: 24, height: 24)
@@ -109,6 +116,7 @@ private struct ResultRowContent: View {
     
     // @note load icon lazily via IconCacheService
     private func loadIconIfNeeded() {
+        guard result.kind == .app else { return }
         let path = result.path
         currentPath = path
         
