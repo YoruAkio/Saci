@@ -30,6 +30,9 @@
 		9F3A1C3E9B2A4D1E9F0A1234 /* EmojiEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3A1C3D9B2A4D1E9F0A1234 /* EmojiEntry.swift */; };
 		9F3A1C409B2A4D1E9F0A1234 /* EmojiLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3A1C3F9B2A4D1E9F0A1234 /* EmojiLibraryService.swift */; };
 		9F3A1C429B2A4D1E9F0A1234 /* EmojiGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3A1C419B2A4D1E9F0A1234 /* EmojiGridView.swift */; };
+		B710A0012F1370000078F2AC /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B710A0002F1370000078F2AC /* ClipboardEntry.swift */; };
+		B710A0032F1370000078F2AC /* ClipboardHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B710A0022F1370000078F2AC /* ClipboardHistoryService.swift */; };
+		B710A0052F1370000078F2AC /* ClipboardHistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B710A0042F1370000078F2AC /* ClipboardHistoryListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +61,9 @@
 		9F3A1C3D9B2A4D1E9F0A1234 /* EmojiEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiEntry.swift; sourceTree = "<group>"; };
 		9F3A1C3F9B2A4D1E9F0A1234 /* EmojiLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiLibraryService.swift; sourceTree = "<group>"; };
 		9F3A1C419B2A4D1E9F0A1234 /* EmojiGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiGridView.swift; sourceTree = "<group>"; };
+		B710A0002F1370000078F2AC /* ClipboardEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardEntry.swift; sourceTree = "<group>"; };
+		B710A0022F1370000078F2AC /* ClipboardHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardHistoryService.swift; sourceTree = "<group>"; };
+		B710A0042F1370000078F2AC /* ClipboardHistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardHistoryListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +127,7 @@
 				66E08C1E2F11A0000078F2AC /* ErrorWindowView.swift */,
 				66E08C232F11B0000078F2AC /* CalculatorResultView.swift */,
 				9F3A1C419B2A4D1E9F0A1234 /* EmojiGridView.swift */,
+				B710A0042F1370000078F2AC /* ClipboardHistoryListView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -131,6 +138,7 @@
 				66E08C0A2F119A000078F2AC /* SearchResult.swift */,
 				66E08C0B2F119A000078F2AC /* AppSettings.swift */,
 				9F3A1C3D9B2A4D1E9F0A1234 /* EmojiEntry.swift */,
+				B710A0002F1370000078F2AC /* ClipboardEntry.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -146,6 +154,7 @@
 				66E08C1C2F11A0000078F2AC /* ErrorManager.swift */,
 				66E08C212F11B0000078F2AC /* CalculatorService.swift */,
 				9F3A1C3F9B2A4D1E9F0A1234 /* EmojiLibraryService.swift */,
+				B710A0022F1370000078F2AC /* ClipboardHistoryService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -241,6 +250,9 @@
 				9F3A1C3E9B2A4D1E9F0A1234 /* EmojiEntry.swift in Sources */,
 				9F3A1C409B2A4D1E9F0A1234 /* EmojiLibraryService.swift in Sources */,
 				9F3A1C429B2A4D1E9F0A1234 /* EmojiGridView.swift in Sources */,
+				B710A0012F1370000078F2AC /* ClipboardEntry.swift in Sources */,
+				B710A0032F1370000078F2AC /* ClipboardHistoryService.swift in Sources */,
+				B710A0052F1370000078F2AC /* ClipboardHistoryListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

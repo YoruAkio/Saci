@@ -104,6 +104,39 @@ enum EmojiHotkeyOption: String, CaseIterable {
     }
 }
 
+// @note clipboard history hotkey options
+enum ClipboardHotkeyOption: String, CaseIterable {
+    case none = "none"
+    case commandShiftV = "commandShiftV"
+    case optionShiftV = "optionShiftV"
+    case controlShiftV = "controlShiftV"
+    
+    var displayName: String {
+        switch self {
+        case .none: return "None"
+        case .commandShiftV: return "⌘ ⇧ V"
+        case .optionShiftV: return "⌥ ⇧ V"
+        case .controlShiftV: return "⌃ ⇧ V"
+        }
+    }
+    
+    var modifierKey: UInt32? {
+        switch self {
+        case .none: return nil
+        case .commandShiftV: return UInt32(Carbon.cmdKey | Carbon.shiftKey)
+        case .optionShiftV: return UInt32(Carbon.optionKey | Carbon.shiftKey)
+        case .controlShiftV: return UInt32(Carbon.controlKey | Carbon.shiftKey)
+        }
+    }
+    
+    var keyCode: UInt32? {
+        switch self {
+        case .none: return nil
+        case .commandShiftV, .optionShiftV, .controlShiftV: return 9
+        }
+    }
+}
+
 // @note user preferences model using AppStorage
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
@@ -117,6 +150,14 @@ class AppSettings: ObservableObject {
     @AppStorage("appTheme") var appThemeRaw: String = AppTheme.system.rawValue
     @AppStorage("hotkeyOption") var hotkeyOptionRaw: String = HotkeyOption.optionSpace.rawValue
     @AppStorage("emojiHotkeyOption") var emojiHotkeyOptionRaw: String = EmojiHotkeyOption.none.rawValue
+    @AppStorage("clipboardHotkeyOption") var clipboardHotkeyOptionRaw: String = ClipboardHotkeyOption.commandShiftV.rawValue
+    @AppStorage("clipboardHistoryLimit") var clipboardHistoryLimit: Int = 1500 {
+        didSet {
+            if clipboardHistoryLimit < 100 { clipboardHistoryLimit = 100 }
+            if clipboardHistoryLimit > 5000 { clipboardHistoryLimit = 5000 }
+            ClipboardHistoryService.shared.enforceLimit()
+        }
+    }
     @AppStorage("enableTransparency") var enableTransparency: Bool = true {
         didSet {
             NotificationCenter.default.post(name: .transparencyDidChange, object: nil)
@@ -145,6 +186,18 @@ class AppSettings: ObservableObject {
             emojiHotkeyOptionRaw = newValue.rawValue
             NotificationCenter.default.post(name: .emojiHotkeyDidChange, object: nil)
         }
+    }
+    
+    var clipboardHotkeyOption: ClipboardHotkeyOption {
+        get { ClipboardHotkeyOption(rawValue: clipboardHotkeyOptionRaw) ?? .commandShiftV }
+        set {
+            clipboardHotkeyOptionRaw = newValue.rawValue
+            NotificationCenter.default.post(name: .clipboardHotkeyDidChange, object: nil)
+        }
+    }
+    
+    var normalizedClipboardHistoryLimit: Int {
+        min(5000, max(100, clipboardHistoryLimit))
     }
     
     // @note apply theme to app appearance
@@ -185,6 +238,7 @@ class AppSettings: ObservableObject {
 extension Notification.Name {
     static let hotkeyDidChange = Notification.Name("hotkeyDidChange")
     static let emojiHotkeyDidChange = Notification.Name("emojiHotkeyDidChange")
+    static let clipboardHotkeyDidChange = Notification.Name("clipboardHotkeyDidChange")
     static let themeDidChange = Notification.Name("themeDidChange")
     static let transparencyDidChange = Notification.Name("transparencyDidChange")
 }

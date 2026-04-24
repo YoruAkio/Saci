@@ -160,6 +160,7 @@ struct SearchFooterView: View {
 enum LauncherMode {
     case search
     case emoji
+    case clipboard
 }
 
 // @note emoji section data for grouped display
@@ -174,6 +175,7 @@ struct EmojiSectionData: Identifiable {
 struct ContentView: View {
     @ObservedObject private var searchService = AppSearchService.shared
     @ObservedObject private var emojiService = EmojiLibraryService.shared
+    @ObservedObject private var clipboardService = ClipboardHistoryService.shared
     @ObservedObject private var settings = AppSettings.shared
     @State private var searchText = ""
     @State private var selectedIndex = 0
@@ -209,6 +211,9 @@ struct ContentView: View {
         if mode == .emoji {
             return true
         }
+        if mode == .clipboard {
+            return true
+        }
         return !currentResults.isEmpty || calculatorResult != nil
     }
     
@@ -216,6 +221,9 @@ struct ContentView: View {
     private var footerActionText: String {
         if mode == .emoji {
             return "Click to Copy"
+        }
+        if mode == .clipboard {
+            return "Copy Item"
         }
         if let selected = selectedResult, selected.kind == .command {
             return "Open Emoji Library"
@@ -235,6 +243,10 @@ struct ContentView: View {
 
     // @note fixed height for emoji mode
     private var emojiPanelHeight: CGFloat {
+        460
+    }
+    
+    private var clipboardPanelHeight: CGFloat {
         460
     }
 
@@ -281,7 +293,7 @@ struct ContentView: View {
                 // @note search bar
             SearchTextField(
                 text: $searchText,
-                placeholder: mode == .emoji ? "Search emojis..." : "Search...",
+                placeholder: searchPlaceholder,
                 rightPadding: mode == .emoji ? (emojiDropdownWidth + 30) : 20,
                 colorScheme: colorScheme,
                 enableTransparency: settings.enableTransparency,
@@ -314,6 +326,12 @@ struct ContentView: View {
                 // @note divider
                 if mode == .emoji {
                     if !emojiDisplayEntries.isEmpty {
+                        Rectangle()
+                            .fill(dividerColor)
+                            .frame(height: 1)
+                    }
+                } else if mode == .clipboard {
+                    if !clipboardService.results.isEmpty {
                         Rectangle()
                             .fill(dividerColor)
                             .frame(height: 1)
@@ -374,6 +392,13 @@ struct ContentView: View {
                         }
                         .frame(maxHeight: .infinity)
                     }
+                } else if mode == .clipboard {
+                    ClipboardHistoryListView(
+                        entries: clipboardService.results,
+                        selectedIndex: $selectedIndex,
+                        onSelect: restoreClipboardEntry
+                    )
+                    .frame(maxHeight: .infinity)
                 } else {
                     // @note results list (app/command results start at index 0 if no calc, or after calc)
                     ResultsListView(
@@ -391,7 +416,7 @@ struct ContentView: View {
                 
                 // @note footer (shown when typing or has results)
                 if showFooter {
-                    if mode == .emoji {
+                    if mode == .emoji || mode == .clipboard {
                         Spacer(minLength: 0)
                     }
                     Rectangle()
@@ -420,7 +445,7 @@ struct ContentView: View {
                     .padding(.top, 14)
             }
         }
-        .frame(width: 680, height: mode == .emoji ? emojiPanelHeight : nil, alignment: .top)
+        .frame(width: 680, height: panelHeight, alignment: .top)
         .background {
             if settings.enableTransparency {
                 ZStack {
@@ -451,6 +476,12 @@ struct ContentView: View {
             
             if mode == .emoji {
                 updateEmojiResults(query: newValue)
+                calculatorWorkItem?.cancel()
+                calculatorResult = nil
+                selectedIndex = 0
+                showCopiedFeedback = false
+            } else if mode == .clipboard {
+                clipboardService.search(query: newValue)
                 calculatorWorkItem?.cancel()
                 calculatorResult = nil
                 selectedIndex = 0
@@ -505,6 +536,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .emojiLibraryRequested)) { _ in
             enterEmojiLibrary()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .clipboardHistoryRequested)) { _ in
+            enterClipboardHistory()
+        }
         .onReceive(emojiService.$emojis) { _ in
             if mode == .emoji {
                 updateEmojiResults(query: searchText)
@@ -538,6 +572,24 @@ struct ContentView: View {
         let remaining = max(0, settings.maxResults - commands.count)
         let apps = Array(searchService.results.prefix(remaining))
         return commands + apps
+    }
+    
+    // @note placeholder based on current launcher mode
+    private var searchPlaceholder: String {
+        switch mode {
+        case .search: return "Search..."
+        case .emoji: return "Search emojis..."
+        case .clipboard: return "Search clipboard history..."
+        }
+    }
+    
+    // @note fixed height only for expanded modes
+    private var panelHeight: CGFloat? {
+        switch mode {
+        case .search: return nil
+        case .emoji: return emojiPanelHeight
+        case .clipboard: return clipboardPanelHeight
+        }
     }
     
     // @note current selected result if valid
@@ -633,6 +685,10 @@ struct ContentView: View {
             moveSelection(by: -1)
             return true
         }
+        if mode == .clipboard {
+            moveClipboardSelection(by: -1)
+            return true
+        }
         return false
     }
     
@@ -642,6 +698,10 @@ struct ContentView: View {
             moveSelection(by: 1)
             return true
         }
+        if mode == .clipboard {
+            moveClipboardSelection(by: 1)
+            return true
+        }
         return false
     }
     
@@ -649,6 +709,8 @@ struct ContentView: View {
     private func handleEscape() {
         if mode == .emoji {
             exitEmojiLibrary()
+        } else if mode == .clipboard {
+            hideWindow()
         } else {
             hideWindow()
         }
@@ -679,6 +741,10 @@ struct ContentView: View {
     // @note handle submit action (copy calc, emoji, or launch)
     private func handleSubmit() {
         if mode == .emoji { return }
+        if mode == .clipboard {
+            restoreSelectedClipboardEntry()
+            return
+        }
         if isCalculatorSelected {
             copyCalculatorResult()
         } else {
@@ -711,6 +777,27 @@ struct ContentView: View {
         guard mode == .search, isValidResultIndex(index) else { return }
         let result = currentResults[index]
         handleResultSelection(result)
+    }
+    
+    // @note move clipboard selection up or down
+    // @param delta direction to move (-1 up, 1 down)
+    private func moveClipboardSelection(by delta: Int) {
+        guard !clipboardService.results.isEmpty else { return }
+        let maxIndex = clipboardService.results.count - 1
+        selectedIndex = max(0, min(maxIndex, selectedIndex + delta))
+    }
+    
+    // @note restore selected clipboard entry
+    private func restoreSelectedClipboardEntry() {
+        guard selectedIndex >= 0 && selectedIndex < clipboardService.results.count else { return }
+        restoreClipboardEntry(clipboardService.results[selectedIndex])
+    }
+    
+    // @note copy clipboard history entry back to pasteboard
+    // @param entry clipboard entry to restore
+    private func restoreClipboardEntry(_ entry: ClipboardEntry) {
+        clipboardService.restore(entry)
+        hideWindow()
     }
     
     // @note copy calculator result to clipboard
@@ -891,6 +978,33 @@ struct ContentView: View {
         NotificationCenter.default.post(name: .emojiLibraryDidExit, object: nil)
     }
     
+    // @note enter clipboard history mode
+    private func enterClipboardHistory() {
+        mode = .clipboard
+        searchText = ""
+        calculatorWorkItem?.cancel()
+        calculatorResult = nil
+        selectedIndex = 0
+        showCopiedFeedback = false
+        showEmojiCategoryMenu = false
+        copiedEmojiToken = nil
+        clipboardService.search(query: "")
+        NotificationCenter.default.post(name: .clipboardHistoryDidEnter, object: nil)
+    }
+    
+    // @note exit clipboard history mode
+    private func exitClipboardHistory() {
+        mode = .search
+        searchText = ""
+        calculatorWorkItem?.cancel()
+        calculatorResult = nil
+        selectedIndex = 0
+        showCopiedFeedback = false
+        clipboardService.clearResults()
+        searchService.search(query: "", maxResults: settings.maxResults + commandResults.count)
+        NotificationCenter.default.post(name: .clipboardHistoryDidExit, object: nil)
+    }
+    
     // @note reset state when window hides
     private func resetStateOnHide() {
         mode = .search
@@ -900,6 +1014,7 @@ struct ContentView: View {
         calculatorResult = nil
         emojiSections = []
         emojiDisplayEntries = []
+        clipboardService.clearResults()
         showCopiedFeedback = false
         showEmojiCategoryMenu = false
         copiedEmojiToken = nil

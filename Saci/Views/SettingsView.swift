@@ -75,6 +75,8 @@ struct SettingsView: View {
     @State private var selectedTheme: AppTheme
     @State private var selectedHotkey: HotkeyOption
     @State private var selectedEmojiHotkey: EmojiHotkeyOption
+    @State private var selectedClipboardHotkey: ClipboardHotkeyOption
+    @State private var clipboardHistoryLimitText: String
     @State private var launchAtLogin: Bool
     @State private var maxResults: Int
     @State private var enableTransparency: Bool
@@ -87,6 +89,8 @@ struct SettingsView: View {
         self._selectedTheme = State(initialValue: settings.appTheme)
         self._selectedHotkey = State(initialValue: settings.hotkeyOption)
         self._selectedEmojiHotkey = State(initialValue: settings.emojiHotkeyOption)
+        self._selectedClipboardHotkey = State(initialValue: settings.clipboardHotkeyOption)
+        self._clipboardHistoryLimitText = State(initialValue: "\(settings.normalizedClipboardHistoryLimit)")
         self._launchAtLogin = State(initialValue: settings.launchAtLogin)
         self._maxResults = State(initialValue: settings.maxResults)
         self._enableTransparency = State(initialValue: settings.enableTransparency)
@@ -129,7 +133,7 @@ struct SettingsView: View {
                     .padding(.vertical, 8)
             }
         }
-        .frame(width: 450, height: 260)
+        .frame(width: 450, height: 340)
         .onAppear {
             settings.syncLaunchAtLogin()
             launchAtLogin = settings.launchAtLogin
@@ -256,9 +260,50 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            
+            SettingsRow("Clipboard History:") {
+                Picker("", selection: $selectedClipboardHotkey) {
+                    ForEach(ClipboardHotkeyOption.allCases, id: \.self) { option in
+                        Text(option.displayName).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 180)
+                .onChange(of: selectedClipboardHotkey) { newValue in
+                    settings.clipboardHotkeyOption = newValue
+                }
+            }
+            
+            SettingsRow("History Limit:") {
+                TextField("1500", text: $clipboardHistoryLimitText)
+                    .frame(width: 90)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        applyClipboardHistoryLimit()
+                    }
+                    .onChange(of: clipboardHistoryLimitText) { _ in
+                        applyClipboardHistoryLimit()
+                    }
+                
+                Text("100-5000")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(.vertical, 20)
         .padding(.horizontal, 24)
+    }
+    
+    // @note apply editable clipboard history limit within allowed range
+    private func applyClipboardHistoryLimit() {
+        let digits = clipboardHistoryLimitText.filter { $0.isNumber }
+        if digits != clipboardHistoryLimitText {
+            clipboardHistoryLimitText = digits
+            return
+        }
+        guard let value = Int(digits) else { return }
+        let clamped = min(5000, max(100, value))
+        settings.clipboardHistoryLimit = clamped
     }
 }
 

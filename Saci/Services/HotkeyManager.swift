@@ -13,10 +13,12 @@ class HotkeyManager: ObservableObject {
     private var eventHandler: EventHandlerRef?
     private var mainHotKeyRef: EventHotKeyRef?
     private var emojiHotKeyRef: EventHotKeyRef?
+    private var clipboardHotKeyRef: EventHotKeyRef?
     private var retainedSelf: Unmanaged<HotkeyManager>?
     
     var onMainHotkeyPressed: (() -> Void)?
     var onEmojiHotkeyPressed: (() -> Void)?
+    var onClipboardHotkeyPressed: (() -> Void)?
     
     private init() {
         // @note observe hotkey changes
@@ -33,6 +35,13 @@ class HotkeyManager: ObservableObject {
             name: .emojiHotkeyDidChange,
             object: nil
         )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(hotkeyDidChange),
+            name: .clipboardHotkeyDidChange,
+            object: nil
+        )
     }
     
     // @note handle hotkey setting change
@@ -46,6 +55,7 @@ class HotkeyManager: ObservableObject {
         let settings = AppSettings.shared
         let mainHotKeyID = EventHotKeyID(signature: OSType(0x53414349), id: 1) // "SACI"
         let emojiHotKeyID = EventHotKeyID(signature: OSType(0x53414349), id: 2) // "SACI"
+        let clipboardHotKeyID = EventHotKeyID(signature: OSType(0x53414349), id: 3) // "SACI"
         
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         
@@ -114,6 +124,26 @@ class HotkeyManager: ObservableObject {
                 ErrorManager.shared.report(.hotkeyRegistrationFailed(code: emojiStatus))
             }
         }
+        
+        // @note register clipboard history hotkey if enabled
+        if let modifier = settings.clipboardHotkeyOption.modifierKey,
+           let keyCode = settings.clipboardHotkeyOption.keyCode {
+            var clipboardHotKeyRefTemp: EventHotKeyRef?
+            let clipboardStatus = RegisterEventHotKey(
+                keyCode,
+                modifier,
+                clipboardHotKeyID,
+                GetApplicationEventTarget(),
+                0,
+                &clipboardHotKeyRefTemp
+            )
+            
+            if clipboardStatus == noErr {
+                clipboardHotKeyRef = clipboardHotKeyRefTemp
+            } else {
+                ErrorManager.shared.report(.hotkeyRegistrationFailed(code: clipboardStatus))
+            }
+        }
     }
     
     // @note unregister hotkey
@@ -126,6 +156,11 @@ class HotkeyManager: ObservableObject {
         if let hotKeyRef = emojiHotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
             self.emojiHotKeyRef = nil
+        }
+        
+        if let hotKeyRef = clipboardHotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.clipboardHotKeyRef = nil
         }
         
         if let eventHandler = eventHandler {
@@ -176,6 +211,10 @@ private func hotkeyEventHandler(
                 }
                 if hotKeyID.id == 2 {
                     manager.onEmojiHotkeyPressed?()
+                    return
+                }
+                if hotKeyID.id == 3 {
+                    manager.onClipboardHotkeyPressed?()
                     return
                 }
             }

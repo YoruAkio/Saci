@@ -110,7 +110,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         hotkeyManager.onEmojiHotkeyPressed = { [weak self] in
             self?.showEmojiLibrary()
         }
+        hotkeyManager.onClipboardHotkeyPressed = { [weak self] in
+            self?.showClipboardHistory()
+        }
         hotkeyManager.register()
+        ClipboardHistoryService.shared.startMonitoring()
         
         // @note start performance monitoring in debug builds only
         #if DEBUG
@@ -144,6 +148,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             self,
             selector: #selector(emojiLibraryDidExit),
             name: .emojiLibraryDidExit,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(clipboardHistoryDidEnter),
+            name: .clipboardHistoryDidEnter,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(clipboardHistoryDidExit),
+            name: .clipboardHistoryDidExit,
             object: nil
         )
         
@@ -521,6 +537,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         resizePanel(height: panelHeight)
     }
     
+    // @note resize panel for clipboard history
+    @objc private func clipboardHistoryDidEnter() {
+        panelHeight = 460
+        resizePanel(height: panelHeight)
+    }
+    
+    // @note resize panel back to default
+    @objc private func clipboardHistoryDidExit() {
+        panelHeight = 100
+        resizePanel(height: panelHeight)
+    }
+    
     // @note resize panel while keeping position
     // @param height desired panel height
     private func resizePanel(height: CGFloat) {
@@ -560,6 +588,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         NotificationCenter.default.post(name: .emojiLibraryRequested, object: nil)
     }
     
+    // @note show clipboard history directly
+    private func showClipboardHistory() {
+        panelHeight = 460
+        if mainPanel?.isVisible != true {
+            showPanel()
+        }
+        NotificationCenter.default.post(name: .clipboardHistoryRequested, object: nil)
+    }
+    
     // @note quit the application
     @objc private func quitApp() {
         NSApp.terminate(nil)
@@ -572,6 +609,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     func applicationWillTerminate(_ notification: Notification) {
         hotkeyManager.unregister()
+        ClipboardHistoryService.shared.stopMonitoring()
         errorCancellable?.cancel()
         if let monitor = localMouseEventMonitor {
             NSEvent.removeMonitor(monitor)
@@ -596,4 +634,7 @@ extension Notification.Name {
     static let emojiLibraryRequested = Notification.Name("emojiLibraryRequested")
     static let emojiLibraryDidEnter = Notification.Name("emojiLibraryDidEnter")
     static let emojiLibraryDidExit = Notification.Name("emojiLibraryDidExit")
+    static let clipboardHistoryRequested = Notification.Name("clipboardHistoryRequested")
+    static let clipboardHistoryDidEnter = Notification.Name("clipboardHistoryDidEnter")
+    static let clipboardHistoryDidExit = Notification.Name("clipboardHistoryDidExit")
 }
