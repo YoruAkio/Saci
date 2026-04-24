@@ -24,6 +24,8 @@ class IconCacheService {
     
     // @note in-memory icon cache (path -> icon)
     private var cache: [String: NSImage] = [:]
+    private var cacheAccessOrder: [String] = []
+    private let maxCacheSize = 128
     
     // @note track pending icon loads to avoid duplicate work
     private var pendingLoads: Set<String> = []
@@ -37,7 +39,11 @@ class IconCacheService {
     // @param path app bundle path
     // @return cached icon or nil if not cached
     func getCachedIcon(for path: String) -> NSImage? {
-        cacheQueue.sync { cache[path] }
+        cacheQueue.sync {
+            guard let icon = cache[path] else { return nil }
+            markCacheAccess(path)
+            return icon
+        }
     }
     
     // @note load icon asynchronously with callback
@@ -45,7 +51,11 @@ class IconCacheService {
     // @param completion called on main thread with loaded icon
     func loadIcon(for path: String, completion: @escaping (NSImage) -> Void) {
         // @note check cache first (synchronous)
-        if let cached = cacheQueue.sync(execute: { cache[path] }) {
+        if let cached = cacheQueue.sync(execute: { () -> NSImage? in
+            guard let icon = cache[path] else { return nil }
+            markCacheAccess(path)
+            return icon
+        }) {
             DispatchQueue.main.async { completion(cached) }
             return
         }
@@ -75,7 +85,7 @@ class IconCacheService {
             
             // @note cache the icon and get completion handlers
             let handlers = self?.cacheQueue.sync { () -> [(NSImage) -> Void]? in
-                self?.cache[path] = icon
+                self?.storeIcon(icon, for: path)
                 self?.pendingLoads.remove(path)
                 let h = self?.completionHandlers[path]
                 self?.completionHandlers.removeValue(forKey: path)
@@ -107,6 +117,7 @@ class IconCacheService {
         loadQueue.cancelAllOperations()
         cacheQueue.sync {
             cache.removeAll()
+            cacheAccessOrder.removeAll()
             pendingLoads.removeAll()
             completionHandlers.removeAll()
         }
@@ -116,5 +127,25 @@ class IconCacheService {
     // @return number of cached icons
     var cacheSize: Int {
         cacheQueue.sync { cache.count }
+    }
+    
+    // @note store icon and evict least-recently-used entries beyond limit
+    // @param icon loaded icon image
+    // @param path app bundle path
+    private func storeIcon(_ icon: NSImage, for path: String) {
+        cache[path] = icon
+        markCacheAccess(path)
+        
+        while cacheAccessOrder.count > maxCacheSize, let oldest = cacheAccessOrder.first {
+            cache.removeValue(forKey: oldest)
+            cacheAccessOrder.removeFirst()
+        }
+    }
+    
+    // @note move path to most-recent cache position
+    // @param path app bundle path
+    private func markCacheAccess(_ path: String) {
+        cacheAccessOrder.removeAll { $0 == path }
+        cacheAccessOrder.append(path)
     }
 }

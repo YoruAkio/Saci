@@ -29,6 +29,19 @@ class EmojiLibraryService: ObservableObject {
     private var usageLoaded = false
     private var buildWorkItem: DispatchWorkItem?
     private var searchWorkItem: DispatchWorkItem?
+    private let cacheFileName = "emoji_cache.json"
+    
+    // @note parsed emoji cache file in Application Support
+    private var cacheFileURL: URL? {
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let saciDir = appSupport.appendingPathComponent("Saci", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: saciDir.path) {
+            try? FileManager.default.createDirectory(at: saciDir, withIntermediateDirectories: true)
+        }
+        return saciDir.appendingPathComponent(cacheFileName)
+    }
     
     private init() {}
     
@@ -47,7 +60,7 @@ class EmojiLibraryService: ObservableObject {
         buildWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            let built = self.buildEmojiData()
+            let built = self.loadBuiltEmojiData()
             
             DispatchQueue.main.async {
                 self.emojis = built.entries
@@ -136,8 +149,24 @@ class EmojiLibraryService: ObservableObject {
     }
     
     // @note build emoji list from unicode emoji-test.txt
-    private func buildEmojiData() -> EmojiBuildResult {
-        let url = Bundle.main.url(
+    private func loadBuiltEmojiData() -> EmojiBuildResult {
+        guard let sourceURL = emojiSourceURL() else {
+            return EmojiBuildResult.empty
+        }
+        
+        let sourceModificationDate = (try? FileManager.default.attributesOfItem(atPath: sourceURL.path)[.modificationDate] as? Date) ?? Date.distantPast
+        if let cached = loadFromCache(sourceModificationDate: sourceModificationDate) {
+            return cached.toBuildResult()
+        }
+        
+        let built = buildEmojiData(from: sourceURL)
+        saveToCache(built, sourceModificationDate: sourceModificationDate)
+        return built
+    }
+    
+    // @note get bundled unicode emoji source file
+    private func emojiSourceURL() -> URL? {
+        Bundle.main.url(
             forResource: "emoji-test",
             withExtension: "txt",
             subdirectory: "Emoji"
@@ -145,12 +174,12 @@ class EmojiLibraryService: ObservableObject {
             forResource: "emoji-test",
             withExtension: "txt"
         )
-        
-        guard let resolvedURL = url else {
-            return EmojiBuildResult.empty
-        }
-        
-        guard let content = try? String(contentsOf: resolvedURL, encoding: .utf8) else {
+    }
+    
+    // @note build emoji list from unicode emoji-test.txt
+    // @param url bundled emoji source file URL
+    private func buildEmojiData(from url: URL) -> EmojiBuildResult {
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else {
             return EmojiBuildResult.empty
         }
         
@@ -258,6 +287,34 @@ class EmojiLibraryService: ObservableObject {
         )
     }
     
+    // @note load parsed emoji cache when source file has not changed
+    // @param sourceModificationDate source emoji file modification date
+    private func loadFromCache(sourceModificationDate: Date) -> EmojiCache? {
+        guard let cacheURL = cacheFileURL,
+              FileManager.default.fileExists(atPath: cacheURL.path),
+              let data = try? Data(contentsOf: cacheURL),
+              let cache = try? JSONDecoder().decode(EmojiCache.self, from: data),
+              cache.sourceModificationDate == sourceModificationDate else {
+            return nil
+        }
+        return cache
+    }
+    
+    // @note save parsed emoji data for faster next load
+    // @param result parsed emoji data
+    // @param sourceModificationDate source emoji file modification date
+    private func saveToCache(_ result: EmojiBuildResult, sourceModificationDate: Date) {
+        guard let cacheURL = cacheFileURL else { return }
+        let cache = EmojiCache(
+            entries: result.entries,
+            categories: result.categories,
+            sourceModificationDate: sourceModificationDate,
+            createdAt: Date()
+        )
+        guard let data = try? JSONEncoder().encode(cache) else { return }
+        try? data.write(to: cacheURL)
+    }
+    
     // @note map unicode group name to display group
     private func mapGroupKey(_ groupName: String) -> EmojiGroupKey? {
         switch groupName {
@@ -355,6 +412,44 @@ private struct EmojiBuildResult {
         lookup: [:],
         categories: [.all, .frequent]
     )
+}
+
+// @note persisted parsed emoji cache
+private struct EmojiCache: Codable {
+    let entries: [EmojiEntry]
+    let categories: [EmojiCategory]
+    let sourceModificationDate: Date
+    let createdAt: Date
+    
+    // @note rebuild derived lookup/group maps from cached entries
+    func toBuildResult() -> EmojiBuildResult {
+        var lookup: [String: EmojiEntry] = [:]
+        var grouped: [EmojiGroupKey: [EmojiEntry]] = [:]
+        var subgroups: [String: [EmojiEntry]] = [:]
+        var subgroupOrder: [String] = []
+        
+        for entry in entries {
+            if lookup[entry.emoji] == nil {
+                lookup[entry.emoji] = entry
+            }
+            grouped[entry.groupKey, default: []].append(entry)
+            if !entry.subgroup.isEmpty {
+                if subgroups[entry.subgroup] == nil {
+                    subgroupOrder.append(entry.subgroup)
+                }
+                subgroups[entry.subgroup, default: []].append(entry)
+            }
+        }
+        
+        return EmojiBuildResult(
+            entries: entries,
+            grouped: grouped,
+            subgroups: subgroups,
+            subgroupOrder: subgroupOrder,
+            lookup: lookup,
+            categories: categories
+        )
+    }
 }
 
 // @note usage model for frequent emojis

@@ -29,7 +29,7 @@ struct FuzzySearchService {
         var matches: [FuzzyMatch] = []
         
         for app in apps {
-            if let score = calculateScore(query: queryLower, target: app.name) {
+            if let score = calculateScore(query: queryLower, app: app) {
                 matches.append(FuzzyMatch(result: app, score: score))
             }
         }
@@ -44,8 +44,12 @@ struct FuzzySearchService {
     // @param query lowercased search query
     // @param target app name to match against
     // @return score (higher is better) or nil if no match
-    private static func calculateScore(query: String, target: String) -> Int? {
-        let targetLower = target.lowercased()
+    // @note calculate fuzzy match score using precomputed SearchResult metadata
+    // @param query lowercased search query
+    // @param app searchable app or command result
+    // @return score (higher is better) or nil if no match
+    private static func calculateScore(query: String, app: SearchResult) -> Int? {
+        let targetLower = app.searchableName
         
         // @note exact match - highest score
         if targetLower == query {
@@ -54,21 +58,21 @@ struct FuzzySearchService {
         
         // @note prefix match - very high score
         if targetLower.hasPrefix(query) {
-            return 9000 + (100 - min(target.count, 100))
+            return 9000 + (100 - min(targetLower.count, 100))
         }
         
         // @note word start match (query matches start of any word)
-        if let wordScore = wordStartScore(query: query, target: targetLower) {
+        if let wordScore = wordStartScore(query: query, words: app.searchableWords) {
             return 8000 + wordScore
         }
         
         // @note contains match - high score
         if targetLower.contains(query) {
-            return 7000 + (100 - min(target.count, 100))
+            return 7000 + (100 - min(targetLower.count, 100))
         }
         
         // @note abbreviation match (vscode -> Visual Studio Code)
-        if let abbrevScore = abbreviationScore(query: query, originalTarget: target) {
+        if let abbrevScore = abbreviationScore(query: query, abbreviation: app.searchableAbbreviation) {
             return 6000 + abbrevScore
         }
         
@@ -84,9 +88,7 @@ struct FuzzySearchService {
     // @param query search query
     // @param target lowercased target string
     // @return score or nil
-    private static func wordStartScore(query: String, target: String) -> Int? {
-        let words = target.split { $0 == " " || $0 == "-" || $0 == "_" || $0 == "." }
-        
+    private static func wordStartScore(query: String, words: [String]) -> Int? {
         for (index, word) in words.enumerated() {
             if word.hasPrefix(query) {
                 // @note earlier word = higher score
@@ -102,34 +104,7 @@ struct FuzzySearchService {
     // @param query search query
     // @param originalTarget original case target for word detection
     // @return score or nil if no match
-    private static func abbreviationScore(query: String, originalTarget: String) -> Int? {
-        // @note extract first letters of words and capitals
-        var initials: [Character] = []
-        var prevWasLower = false
-        var prevWasSeparator = true
-        
-        for char in originalTarget {
-            let isSeparator = char == " " || char == "-" || char == "_" || char == "."
-            
-            if isSeparator {
-                prevWasSeparator = true
-                prevWasLower = false
-                continue
-            }
-            
-            let isCapital = char.isUppercase
-            
-            // @note include: char after separator, or capital after lowercase (camelCase)
-            if prevWasSeparator || (isCapital && prevWasLower) {
-                initials.append(Character(char.lowercased()))
-            }
-            
-            prevWasLower = char.isLowercase
-            prevWasSeparator = false
-        }
-        
-        let abbreviation = String(initials)
-        
+    private static func abbreviationScore(query: String, abbreviation: String) -> Int? {
         // @note query must match initials exactly or as prefix
         if abbreviation == query {
             return 200

@@ -6,7 +6,7 @@
 import Foundation
 
 // @note emoji group keys for display
-enum EmojiGroupKey: String, CaseIterable {
+enum EmojiGroupKey: String, CaseIterable, Codable {
     case smileysPeople = "smileysPeople"
     case animalsNature = "animalsNature"
     case foodDrink = "foodDrink"
@@ -31,7 +31,7 @@ enum EmojiGroupKey: String, CaseIterable {
 }
 
 // @note emoji category kind
-enum EmojiCategoryKind: String, Hashable {
+enum EmojiCategoryKind: String, Hashable, Codable {
     case all
     case frequent
     case group
@@ -39,7 +39,7 @@ enum EmojiCategoryKind: String, Hashable {
 }
 
 // @note model for emoji category
-struct EmojiCategory: Identifiable, Hashable {
+struct EmojiCategory: Identifiable, Hashable, Codable {
     let id: String
     let title: String
     let kind: EmojiCategoryKind
@@ -84,7 +84,7 @@ struct EmojiCategory: Identifiable, Hashable {
 }
 
 // @note model for emoji entry
-struct EmojiEntry: Identifiable, Hashable {
+struct EmojiEntry: Identifiable, Hashable, Codable {
     let id: String
     let emoji: String
     let name: String
