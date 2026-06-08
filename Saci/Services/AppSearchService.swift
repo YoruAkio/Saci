@@ -238,9 +238,9 @@ class AppSearchService: ObservableObject {
     // @param query search text to filter
     // @param maxResults maximum results to return, or nil for unlimited
     func search(query: String, maxResults: Int? = nil) {
-        // @note cancel previous search and pending icon loads
+        // @note cancel previous pending search only (keep icon loads running so
+        // @note still-visible rows don't get their load dropped before completion)
         searchWorkItem?.cancel()
-        IconCacheService.shared.cancelPendingLoads()
         
         if query.isEmpty {
             // @note show top apps when query is empty (all apps when unlimited)
