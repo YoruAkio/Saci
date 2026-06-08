@@ -52,11 +52,24 @@ jobs:
           mkdir -p export
           cp -R build/Saci.xcarchive/Products/Applications/Saci.app export/
 
-      - name: Zip app
+      - name: Create DMG
         run: |
-          cd export
-          zip -r ../Saci-${{ steps.version.outputs.version }}.zip Saci.app
-          cd ..
+          brew install create-dmg
+          create-dmg \
+            --volname "Saci" \
+            --window-pos 200 120 \
+            --window-size 540 380 \
+            --icon-size 120 \
+            --icon "Saci.app" 150 190 \
+            --app-drop-link 390 190 \
+            --hide-extension "Saci.app" \
+            --no-internet-enable \
+            "Saci-${{ steps.version.outputs.version }}.dmg" \
+            "export/" \
+          || create-dmg \
+            --volname "Saci" \
+            "Saci-${{ steps.version.outputs.version }}.dmg" \
+            "export/"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -65,8 +78,17 @@ jobs:
           name: Saci v${{ steps.version.outputs.version }}
           body: |
             **Full Changelog**: ${{ steps.prev_tag.outputs.prev_tag == 'initial' && format('https://github.com/{0}/commits/v{1}', github.repository, steps.version.outputs.version) || format('https://github.com/{0}/compare/{1}...v{2}', github.repository, steps.prev_tag.outputs.prev_tag, steps.version.outputs.version) }}
-          files: Saci-${{ steps.version.outputs.version }}.zip
+
+            ---
+
+            ### Installation
+            1. Open the `.dmg` and drag **Saci** into the **Applications** folder.
+            2. Saci is not notarized (no Apple Developer account), so on first launch macOS may warn it is from an unidentified developer. Either right-click the app and choose **Open**, or run:
+               ```
+               xattr -dr com.apple.quarantine /Applications/Saci.app
+               ```
+          files: Saci-${{ steps.version.outputs.version }}.dmg
           draft: false
-          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') }}
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

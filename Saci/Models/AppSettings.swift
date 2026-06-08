@@ -5,7 +5,6 @@
 
 import SwiftUI
 import Carbon
-import ServiceManagement
 
 // @note theme options enum
 enum AppTheme: String, CaseIterable {
@@ -217,11 +216,7 @@ class AppSettings: ObservableObject {
     // @note update launch at login setting
     private func updateLaunchAtLogin() {
         do {
-            if launchAtLogin {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
+            try LaunchAtLoginManager.shared.setEnabled(launchAtLogin)
         } catch {
             print("Failed to update launch at login: \(error)")
         }
@@ -229,7 +224,53 @@ class AppSettings: ObservableObject {
     
     // @note sync launch at login state on app start
     func syncLaunchAtLogin() {
-        launchAtLogin = SMAppService.mainApp.status == .enabled
+        let enabled = LaunchAtLoginManager.shared.isEnabled
+        if launchAtLogin != enabled {
+            launchAtLogin = enabled
+        }
+    }
+}
+
+// @note manages launch-at-login via a LaunchAgent plist
+// @note works for unsigned/un-notarized builds (no SMAppService / Developer ID required)
+final class LaunchAtLoginManager {
+    static let shared = LaunchAtLoginManager()
+    
+    private var label: String {
+        Bundle.main.bundleIdentifier ?? "com.yoruakio.Saci"
+    }
+    
+    // @note ~/Library/LaunchAgents/<bundle-id>.plist (real home, app is not sandboxed)
+    private var plistURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents", isDirectory: true)
+            .appendingPathComponent("\(label).plist")
+    }
+    
+    // @note whether the login item plist currently exists
+    var isEnabled: Bool {
+        FileManager.default.fileExists(atPath: plistURL.path)
+    }
+    
+    // @note enable/disable the login item by writing/removing the LaunchAgent plist
+    // @param enabled desired state
+    func setEnabled(_ enabled: Bool) throws {
+        let url = plistURL
+        if enabled {
+            guard let executablePath = Bundle.main.executableURL?.path else { return }
+            let dir = url.deletingLastPathComponent()
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let plist: [String: Any] = [
+                "Label": label,
+                "ProgramArguments": [executablePath],
+                "RunAtLoad": true,
+                "ProcessType": "Interactive"
+            ]
+            let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            try data.write(to: url, options: .atomic)
+        } else if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
     }
 }
 

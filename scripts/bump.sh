@@ -22,7 +22,7 @@ if [[ $# -lt 2 ]]; then
     echo "Usage: ./scripts/bump.sh <version> <commit-message>"
     echo "       ./scripts/bump.sh -v (show current version)"
     echo ""
-    echo "Example: ./scripts/bump.sh 0.1.1-alpha \"feat: fix bugs\""
+    echo "Example: ./scripts/bump.sh 0.1.1 \"feat: fix bugs\""
     exit 1
 fi
 
@@ -51,8 +51,8 @@ while true; do
     fi
 done
 
-# @note update version in project.pbxproj
-sed -i '' "s/MARKETING_VERSION = $CURRENT_VERSION;/MARKETING_VERSION = $NEW_VERSION;/g" "$PROJECT_FILE"
+# @note update version in project.pbxproj (all build configurations)
+sed -i '' "s/MARKETING_VERSION = .*;/MARKETING_VERSION = $NEW_VERSION;/g" "$PROJECT_FILE"
 
 if [[ $? -ne 0 ]]; then
     echo "Error: Failed to update version in $PROJECT_FILE"

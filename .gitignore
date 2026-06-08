@@ -41,3 +41,6 @@ playground.xcworkspace
 
 # SourceKit LSP
 .sourcekit-lsp/
+
+# DMG build artifacts
+*.dmg

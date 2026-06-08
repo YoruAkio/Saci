@@ -5,7 +5,6 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-alpha-orange" alt="Status: Alpha">
   <img src="https://img.shields.io/badge/platform-macOS-blue" alt="Platform: macOS">
   <img src="https://img.shields.io/badge/swift-5.0-orange" alt="Swift 5.0">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT">
@@ -25,13 +24,19 @@
 - macOS 13.7 or later
 - Xcode 15.2 (for building from source)
 
-> **Note**: This app was built and tested on macOS 13.7 using Xcode 15.2. For Saci v0.4.1-alpha+, it was built and tested on macOS 15.7.3 using Xcode 26.2.
+> **Note**: This app was built and tested on macOS 13.7 using Xcode 15.2. For Saci v0.4.1+, it was built and tested on macOS 15.7.3 using Xcode 26.2.
 
 ## Installation
 
 ### Pre-Built Binary
 
-You can download the latest pre-built binary from the [Releases](https://github.com/YoruAkio/Saci/releases) page.
+Download the latest `.dmg` from the [Releases](https://github.com/YoruAkio/Saci/releases) page, open it, and drag **Saci** into the **Applications** folder.
+
+Saci is not notarized (it's distributed without an Apple Developer account), so on first launch macOS may warn it's from an unidentified developer. Either right-click the app and choose **Open**, or remove the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Saci.app
+```
 
 ### Build from Source
 
