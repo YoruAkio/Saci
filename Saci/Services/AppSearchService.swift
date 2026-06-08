@@ -225,24 +225,25 @@ class AppSearchService: ObservableObject {
     }
     
     // @note get top apps sorted alphabetically
-    // @param limit maximum number of apps to return
+    // @param limit maximum number of apps to return, or nil for all apps
     // @return array of top apps
-    func getTopApps(limit: Int) -> [SearchResult] {
+    func getTopApps(limit: Int?) -> [SearchResult] {
         return appsQueue.sync {
-            Array(allApps.prefix(limit))
+            guard let limit = limit else { return allApps }
+            return Array(allApps.prefix(limit))
         }
     }
     
     // @note filter apps based on search query with debounce
     // @param query search text to filter
-    // @param maxResults maximum results to return (for early termination)
-    func search(query: String, maxResults: Int = 20) {
+    // @param maxResults maximum results to return, or nil for unlimited
+    func search(query: String, maxResults: Int? = nil) {
         // @note cancel previous search and pending icon loads
         searchWorkItem?.cancel()
         IconCacheService.shared.cancelPendingLoads()
         
         if query.isEmpty {
-            // @note show top apps when query is empty
+            // @note show top apps when query is empty (all apps when unlimited)
             results = getTopApps(limit: maxResults)
             return
         }
@@ -253,8 +254,8 @@ class AppSearchService: ObservableObject {
             // @note thread-safe read of allApps
             let apps = self.appsQueue.sync { self.allApps }
             
-            // @note limit for early termination (get extra for better ranking)
-            let limit = maxResults + 5
+            // @note limit for early termination (get extra for better ranking), unlimited when nil
+            let limit = maxResults.map { $0 + 5 } ?? Int.max
             
             // @note use fuzzy search for better matching (vscode -> Visual Studio Code)
             let filtered = FuzzySearchService.search(query: query, in: apps, limit: limit)

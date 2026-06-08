@@ -409,8 +409,7 @@ struct ContentView: View {
                         ),
                         onSelect: { result in
                             handleResultSelection(result)
-                        },
-                        maxResults: settings.maxResults
+                        }
                     )
                 }
                 
@@ -488,7 +487,7 @@ struct ContentView: View {
                 showCopiedFeedback = false
             } else {
                 // @note always search (empty query returns top apps)
-                searchService.search(query: newValue, maxResults: settings.maxResults + commandResults.count)
+                searchService.search(query: newValue)
                 
                 if newValue.isEmpty {
                     calculatorWorkItem?.cancel()
@@ -525,7 +524,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .saciWindowWillShow)) { _ in
             // @note show top apps when window opens
             if mode == .search {
-                searchService.search(query: "", maxResults: settings.maxResults + commandResults.count)
+                searchService.search(query: "")
                 selectedIndex = 0
             }
         }
@@ -566,12 +565,9 @@ struct ContentView: View {
         return FuzzySearchService.search(query: searchText, in: [command], limit: 1)
     }
     
-    // @note combined results list (commands + apps)
+    // @note combined results list (commands + apps), uncapped
     private var currentResults: [SearchResult] {
-        let commands = commandResults
-        let remaining = max(0, settings.maxResults - commands.count)
-        let apps = Array(searchService.results.prefix(remaining))
-        return commands + apps
+        commandResults + searchService.results
     }
     
     // @note placeholder based on current launcher mode
@@ -974,7 +970,7 @@ struct ContentView: View {
         showCopiedFeedback = false
         showEmojiCategoryMenu = false
         copiedEmojiToken = nil
-        searchService.search(query: "", maxResults: settings.maxResults + commandResults.count)
+        searchService.search(query: "")
         NotificationCenter.default.post(name: .emojiLibraryDidExit, object: nil)
     }
     
@@ -1001,7 +997,7 @@ struct ContentView: View {
         selectedIndex = 0
         showCopiedFeedback = false
         clipboardService.clearResults()
-        searchService.search(query: "", maxResults: settings.maxResults + commandResults.count)
+        searchService.search(query: "")
         NotificationCenter.default.post(name: .clipboardHistoryDidExit, object: nil)
     }
     
@@ -1284,10 +1280,9 @@ class SaciTextField: NSTextField {
     var onCommandComma: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     
-    // @note number key codes (1-9)
+    // @note number key codes (1-5) for quick app launch
     private let numberKeyCodes: [UInt16: Int] = [
-        18: 1, 19: 2, 20: 3, 21: 4, 23: 5,
-        22: 6, 26: 7, 28: 8, 25: 9
+        18: 1, 19: 2, 20: 3, 21: 4, 23: 5
     ]
     
     // @note handle key shortcuts before they reach the system
@@ -1305,7 +1300,7 @@ class SaciTextField: NSTextField {
                 return true
             }
             
-            // @note handle Cmd+number (1-9) for quick app launch
+            // @note handle Cmd+number (1-5) for quick app launch
             if let number = numberKeyCodes[event.keyCode] {
                 onCommandNumber?(number - 1) // convert to 0-based index
                 return true

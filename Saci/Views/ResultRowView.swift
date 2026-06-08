@@ -59,8 +59,8 @@ private struct ResultRowContent: View {
             
             Spacer()
             
-            // @note keybind hint (⌘ + number) for apps only
-            if result.kind == .app {
+            // @note keybind hint (⌘ + number) for the first 5 rows only
+            if index < 5 {
                 HStack(spacing: 2) {
                     Text("⌘")
                         .font(.system(size: 11, weight: .medium))

@@ -78,7 +78,6 @@ struct SettingsView: View {
     @State private var selectedClipboardHotkey: ClipboardHotkeyOption
     @State private var clipboardHistoryLimitText: String
     @State private var launchAtLogin: Bool
-    @State private var maxResults: Int
     @State private var enableTransparency: Bool
     var onClose: (() -> Void)?
     
@@ -92,7 +91,6 @@ struct SettingsView: View {
         self._selectedClipboardHotkey = State(initialValue: settings.clipboardHotkeyOption)
         self._clipboardHistoryLimitText = State(initialValue: "\(settings.normalizedClipboardHistoryLimit)")
         self._launchAtLogin = State(initialValue: settings.launchAtLogin)
-        self._maxResults = State(initialValue: settings.maxResults)
         self._enableTransparency = State(initialValue: settings.enableTransparency)
     }
     
@@ -160,21 +158,6 @@ struct SettingsView: View {
                 .frame(width: 160)
                 .onChange(of: selectedHotkey) { newValue in
                     settings.hotkeyOption = newValue
-                }
-            }
-            
-            // @note max results picker
-            SettingsRow("Max Results:") {
-                Picker("", selection: $maxResults) {
-                    Text("5").tag(5)
-                    Text("8").tag(8)
-                    Text("10").tag(10)
-                    Text("15").tag(15)
-                }
-                .labelsHidden()
-                .frame(width: 160)
-                .onChange(of: maxResults) { newValue in
-                    settings.maxResults = newValue
                 }
             }
             

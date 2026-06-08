@@ -146,7 +146,6 @@ class AppSettings: ObservableObject {
             updateLaunchAtLogin()
         }
     }
-    @AppStorage("maxResults") var maxResults: Int = 8
     @AppStorage("appTheme") var appThemeRaw: String = AppTheme.system.rawValue
     @AppStorage("hotkeyOption") var hotkeyOptionRaw: String = HotkeyOption.optionSpace.rawValue
     @AppStorage("emojiHotkeyOption") var emojiHotkeyOptionRaw: String = EmojiHotkeyOption.none.rawValue
