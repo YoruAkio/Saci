@@ -42,10 +42,14 @@ class ClipboardHistoryService: ObservableObject {
     // @note begin lightweight clipboard polling
     func startMonitoring() {
         guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak self] _ in
+        let newTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak self] _ in
             self?.checkClipboard()
         }
-        RunLoop.main.add(timer!, forMode: .common)
+        // @note allow the system to coalesce wakeups for better energy efficiency
+        // @note (polling must stay on so copies made in other apps are still captured)
+        newTimer.tolerance = 0.2
+        timer = newTimer
+        RunLoop.main.add(newTimer, forMode: .common)
     }
     
     // @note stop clipboard polling

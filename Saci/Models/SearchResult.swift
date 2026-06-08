@@ -22,6 +22,8 @@ struct SearchResult: Identifiable, Hashable {
     let searchableName: String
     let searchableWords: [String]
     let searchableAbbreviation: String
+    // @note precomputed character array so fuzzy subsequence scoring avoids rebuilding it per query
+    let searchableCharacters: [Character]
     
     init(
         name: String,
@@ -36,9 +38,11 @@ struct SearchResult: Identifiable, Hashable {
         self.kind = kind
         self.subtitle = subtitle
         self.iconSystemName = iconSystemName
-        self.searchableName = name.lowercased()
-        self.searchableWords = name.lowercased().split { $0 == " " || $0 == "-" || $0 == "_" || $0 == "." }.map(String.init)
+        let lowerName = name.lowercased()
+        self.searchableName = lowerName
+        self.searchableWords = lowerName.split { $0 == " " || $0 == "-" || $0 == "_" || $0 == "." }.map(String.init)
         self.searchableAbbreviation = SearchResult.makeAbbreviation(from: name)
+        self.searchableCharacters = Array(lowerName)
     }
 
     // @note precompute app initials once so every query avoids rebuilding them
@@ -86,6 +90,9 @@ struct SearchResult: Identifiable, Hashable {
             iconSystemName: "face.smiling"
         )
     }
+    
+    // @note shared instance reused across renders (struct init recomputes searchable fields)
+    static let emojiLibraryCommandShared = SearchResult.emojiLibraryCommand()
 }
 
 // @note cached app entry for persistent storage

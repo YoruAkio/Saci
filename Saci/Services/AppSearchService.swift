@@ -155,15 +155,15 @@ class AppSearchService: ObservableObject {
             
             // @note only update if there are changes
             if !newApps.isEmpty || !removedPaths.isEmpty {
-                DispatchQueue.main.async {
-                    self.appsQueue.sync {
-                        if !removedPaths.isEmpty {
-                            self.allApps.removeAll { removedPaths.contains($0.path) }
-                        }
-                        if !newApps.isEmpty {
-                            self.allApps.append(contentsOf: newApps)
-                            self.allApps.sort { $0.name.lowercased() < $1.name.lowercased() }
-                        }
+                // @note mutate and sort under the serial queue on this background thread
+                // @note (allApps is private and not @Published, so no main-thread hop is needed)
+                self.appsQueue.sync {
+                    if !removedPaths.isEmpty {
+                        self.allApps.removeAll { removedPaths.contains($0.path) }
+                    }
+                    if !newApps.isEmpty {
+                        self.allApps.append(contentsOf: newApps)
+                        self.allApps.sort { $0.name.lowercased() < $1.name.lowercased() }
                     }
                 }
                 

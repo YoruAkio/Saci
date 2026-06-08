@@ -26,10 +26,13 @@ struct FuzzySearchService {
         // @note skip empty query
         guard !queryLower.isEmpty else { return [] }
         
+        // @note build query character array once per search instead of per app
+        let queryChars = Array(queryLower)
+        
         var matches: [FuzzyMatch] = []
         
         for app in apps {
-            if let score = calculateScore(query: queryLower, app: app) {
+            if let score = calculateScore(query: queryLower, queryChars: queryChars, app: app) {
                 matches.append(FuzzyMatch(result: app, score: score))
             }
         }
@@ -48,7 +51,7 @@ struct FuzzySearchService {
     // @param query lowercased search query
     // @param app searchable app or command result
     // @return score (higher is better) or nil if no match
-    private static func calculateScore(query: String, app: SearchResult) -> Int? {
+    private static func calculateScore(query: String, queryChars: [Character], app: SearchResult) -> Int? {
         let targetLower = app.searchableName
         
         // @note exact match - highest score
@@ -76,8 +79,8 @@ struct FuzzySearchService {
             return 6000 + abbrevScore
         }
         
-        // @note subsequence match - all query chars appear in order
-        if let subseqScore = subsequenceScore(query: query, target: targetLower) {
+        // @note subsequence match - all query chars appear in order (uses precomputed char arrays)
+        if let subseqScore = subsequenceScore(queryChars: queryChars, targetChars: app.searchableCharacters) {
             return subseqScore
         }
         
@@ -146,13 +149,10 @@ struct FuzzySearchService {
     // @note calculate subsequence match score
     // all query chars must appear in order in target
     // scoring: consecutive matches, word boundary matches, early position
-    // @param query search query
-    // @param target lowercased target string
+    // @param queryChars precomputed query character array
+    // @param targetChars precomputed target character array
     // @return score based on match quality or nil if no match
-    private static func subsequenceScore(query: String, target: String) -> Int? {
-        let queryChars = Array(query)
-        let targetChars = Array(target)
-        
+    private static func subsequenceScore(queryChars: [Character], targetChars: [Character]) -> Int? {
         guard !queryChars.isEmpty && !targetChars.isEmpty else { return nil }
         
         // @note find best match positions using greedy with scoring
@@ -213,7 +213,7 @@ struct FuzzySearchService {
         }
         
         // @note penalty for long targets (prefer shorter names)
-        score -= target.count / 5
+        score -= targetChars.count / 5
         
         return max(1, score)
     }

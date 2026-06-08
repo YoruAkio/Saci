@@ -36,6 +36,20 @@ class CalculatorService {
     
     private init() {}
     
+    // @note shared formatters reused across evaluations (creation is expensive)
+    // @note only fixed-config formatters are shared; timezone formatters stay local to avoid data races
+    private static let mediumDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+    
+    private static let weekdayDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d, yyyy"
+        return formatter
+    }()
+    
     // @note try to evaluate input as calculator expression
     // @param input user input string
     // @return CalculatorResult if valid expression, nil otherwise
@@ -532,14 +546,11 @@ class CalculatorService {
                 
                 let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: finalDate).day ?? 0
                 
-                let formatter = DateFormatter()
-                formatter.dateStyle = .medium
-                
                 return CalculatorResult(
                     type: .date,
                     expression: input,
                     result: "\(days) days",
-                    subtitle: "Until \(formatter.string(from: finalDate))",
+                    subtitle: "Until \(Self.mediumDateFormatter.string(from: finalDate))",
                     icon: "calendar"
                 )
             }
@@ -578,13 +589,10 @@ class CalculatorService {
                     if daysToAdd == 0 && unit.starts(with: "week") { daysToAdd = 0 }
                     
                     if let finalDate = calendar.date(byAdding: .day, value: daysToAdd, to: futureDate) {
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "EEEE, MMMM d, yyyy"
-                        
                         return CalculatorResult(
                             type: .date,
                             expression: input,
-                            result: formatter.string(from: finalDate),
+                            result: Self.weekdayDateFormatter.string(from: finalDate),
                             subtitle: "\(dayName.capitalized) in \(number) \(unit)",
                             icon: "calendar"
                         )

@@ -28,20 +28,24 @@ struct ClipboardHistoryListView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 4) {
+                        // @note identity is the stable entry id for both ForEach and .id() to
+                        // @note avoid position-based row reuse showing stale content
                         ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                             clipboardRow(entry, index: index)
-                                .id(index)
+                                .contentShape(Rectangle())
                                 .onTapGesture {
                                     onSelect(entry)
                                 }
+                                .id(entry.id)
                         }
                     }
                     .padding(.vertical, 8)
                     .padding(.horizontal, 8)
                 }
                 .onChange(of: selectedIndex) { index in
+                    guard index >= 0, index < entries.count else { return }
                     withAnimation(.easeInOut(duration: 0.12)) {
-                        proxy.scrollTo(index, anchor: .center)
+                        proxy.scrollTo(entries[index].id, anchor: .center)
                     }
                 }
             }
@@ -86,11 +90,16 @@ struct ClipboardHistoryListView: View {
         .cornerRadius(6)
     }
     
+    // @note shared formatter reused across rows (creation is expensive)
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
+    
     // @note compact relative timestamp for display
     // @param date clipboard creation date
     private func relativeDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
+        return Self.relativeFormatter.localizedString(for: date, relativeTo: Date())
     }
 }

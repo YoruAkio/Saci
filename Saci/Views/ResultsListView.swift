@@ -33,18 +33,20 @@ struct ResultsListView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: rowSpacing) {
+                        // @note identity is the stable result id for both ForEach and .id() so
+                        // @note rows never get matched by position and show stale content
                         ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
                             ResultRowView(
                                 result: result,
                                 isSelected: index == selectedIndex,
                                 index: index
                             )
-                            .equatable()
                             .frame(height: rowHeight)
-                            .id(index)
+                            .contentShape(Rectangle())
                             .onTapGesture {
                                 onSelect(result)
                             }
+                            .id(result.id)
                         }
                     }
                     .padding(.vertical, verticalPadding)
@@ -53,9 +55,9 @@ struct ResultsListView: View {
                 .frame(height: listHeight)
                 .onChange(of: selectedIndex) { index in
                     // @note keep the selected row visible during keyboard navigation
-                    guard index >= 0 else { return }
+                    guard index >= 0, index < results.count else { return }
                     withAnimation(.easeInOut(duration: 0.12)) {
-                        proxy.scrollTo(index, anchor: .center)
+                        proxy.scrollTo(results[index].id, anchor: .center)
                     }
                 }
             }

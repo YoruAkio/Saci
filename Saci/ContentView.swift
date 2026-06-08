@@ -401,16 +401,25 @@ struct ContentView: View {
                     .frame(maxHeight: .infinity)
                 } else {
                     // @note results list (app/command results start at index 0 if no calc, or after calc)
-                    ResultsListView(
-                        results: currentResults,
-                        selectedIndex: Binding(
-                            get: { selectedIndex },
-                            set: { selectedIndex = $0 }
-                        ),
-                        onSelect: { result in
-                            handleResultSelection(result)
-                        }
-                    )
+                    if currentResults.isEmpty && !searchText.isEmpty && calculatorResult == nil {
+                        // @note empty state when a query matches nothing
+                        Text("No items with name '\(searchText)'")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                    } else {
+                        ResultsListView(
+                            results: currentResults,
+                            selectedIndex: Binding(
+                                get: { selectedIndex },
+                                set: { selectedIndex = $0 }
+                            ),
+                            onSelect: { result in
+                                handleResultSelection(result)
+                            }
+                        )
+                    }
                 }
                 
                 // @note footer (shown when typing or has results)
@@ -558,7 +567,7 @@ struct ContentView: View {
     
     // @note command results for the launcher
     private var commandResults: [SearchResult] {
-        let command = SearchResult.emojiLibraryCommand()
+        let command = SearchResult.emojiLibraryCommandShared
         if searchText.isEmpty {
             return [command]
         }
@@ -566,6 +575,7 @@ struct ContentView: View {
     }
     
     // @note combined results list (commands + apps), uncapped
+    // @note computed so it always reflects the latest query and app results
     private var currentResults: [SearchResult] {
         commandResults + searchService.results
     }
@@ -1125,6 +1135,9 @@ struct SearchTextField: NSViewRepresentable {
     }
     
     func updateNSView(_ nsView: NSView, context: Context) {
+        // @note keep the coordinator's parent current so its text binding and callbacks aren't stale
+        context.coordinator.parent = self
+        
         if let textField = context.coordinator.textField {
             if textField.stringValue != text {
                 textField.stringValue = text
