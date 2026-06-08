@@ -59,8 +59,8 @@ private struct ResultRowContent: View {
             
             Spacer()
             
-            // @note keybind hint (⌘ + number) for the first 5 rows only
-            if index < 5 {
+            // @note keybind hint (⌘ + number) for the first 9 rows only
+            if index < 9 {
                 HStack(spacing: 2) {
                     Text("⌘")
                         .font(.system(size: 11, weight: .medium))
@@ -97,10 +97,15 @@ private struct ResultRowContent: View {
     @ViewBuilder
     private var iconView: some View {
         if result.kind == .command {
+            // @note command icon: smaller symbol centered in a rounded box matching app icon size
             Image(systemName: result.iconSystemName ?? "command")
-                .resizable()
-                .frame(width: 22, height: 22)
+                .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.secondary)
+                .frame(width: 24, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.secondary.opacity(0.15))
+                )
         } else if let loadedIcon = icon {
             Image(nsImage: loadedIcon)
                 .resizable()

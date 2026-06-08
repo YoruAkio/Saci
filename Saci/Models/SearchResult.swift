@@ -93,6 +93,19 @@ struct SearchResult: Identifiable, Hashable {
     
     // @note shared instance reused across renders (struct init recomputes searchable fields)
     static let emojiLibraryCommandShared = SearchResult.emojiLibraryCommand()
+    
+    static func clipboardHistoryCommand() -> SearchResult {
+        SearchResult(
+            name: "Clipboard History",
+            path: "command://clipboard-history",
+            kind: .command,
+            subtitle: "Command",
+            iconSystemName: "doc.on.clipboard"
+        )
+    }
+    
+    // @note shared instance reused across renders (struct init recomputes searchable fields)
+    static let clipboardHistoryCommandShared = SearchResult.clipboardHistoryCommand()
 }
 
 // @note cached app entry for persistent storage

@@ -225,11 +225,18 @@ struct ContentView: View {
         if mode == .clipboard {
             return "Copy Item"
         }
-        if let selected = selectedResult, selected.kind == .command {
-            return "Open Emoji Library"
-        }
         if isCalculatorSelected {
             return "Copy Result"
+        }
+        if let selected = selectedResult {
+            if selected.kind == .command {
+                if selected.path == SearchResult.clipboardHistoryCommandShared.path {
+                    return "Open Clipboard History"
+                }
+                return "Open Emoji Library"
+            }
+            // @note app selected: show its name
+            return "Open \(selected.name)"
         }
         return "Open Application"
     }
@@ -567,11 +574,14 @@ struct ContentView: View {
     
     // @note command results for the launcher
     private var commandResults: [SearchResult] {
-        let command = SearchResult.emojiLibraryCommandShared
+        let commands = [
+            SearchResult.emojiLibraryCommandShared,
+            SearchResult.clipboardHistoryCommandShared
+        ]
         if searchText.isEmpty {
-            return [command]
+            return commands
         }
-        return FuzzySearchService.search(query: searchText, in: [command], limit: 1)
+        return FuzzySearchService.search(query: searchText, in: commands, limit: commands.count)
     }
     
     // @note combined results list (commands + apps), uncapped
@@ -763,7 +773,12 @@ struct ContentView: View {
     private func handleResultSelection(_ result: SearchResult) {
         switch result.kind {
         case .command:
-            enterEmojiLibrary()
+            switch result.path {
+            case SearchResult.clipboardHistoryCommandShared.path:
+                enterClipboardHistory()
+            default:
+                enterEmojiLibrary()
+            }
         case .app:
             searchService.launchApp(at: result.path)
             hideWindow()
@@ -1293,9 +1308,10 @@ class SaciTextField: NSTextField {
     var onCommandComma: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     
-    // @note number key codes (1-5) for quick app launch
+    // @note number key codes (1-9) for quick app launch
     private let numberKeyCodes: [UInt16: Int] = [
-        18: 1, 19: 2, 20: 3, 21: 4, 23: 5
+        18: 1, 19: 2, 20: 3, 21: 4, 23: 5,
+        22: 6, 26: 7, 28: 8, 25: 9
     ]
     
     // @note handle key shortcuts before they reach the system
@@ -1313,7 +1329,7 @@ class SaciTextField: NSTextField {
                 return true
             }
             
-            // @note handle Cmd+number (1-5) for quick app launch
+            // @note handle Cmd+number (1-9) for quick app launch
             if let number = numberKeyCodes[event.keyCode] {
                 onCommandNumber?(number - 1) // convert to 0-based index
                 return true
