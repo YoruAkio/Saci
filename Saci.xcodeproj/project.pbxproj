@@ -396,7 +396,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.0-alpha;
+				MARKETING_VERSION = 0.7.1-alpha;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yoruakio.Saci;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

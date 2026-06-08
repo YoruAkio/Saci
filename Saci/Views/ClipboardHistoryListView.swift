@@ -5,20 +5,68 @@
 
 import SwiftUI
 
+// @note ordered actions shown in the clipboard actions box
+enum ClipboardAction: Int, CaseIterable {
+    case paste
+    case copy
+    case pin
+    case share
+    case delete
+    case clearAll
+    
+    func title(isPinned: Bool) -> String {
+        switch self {
+        case .paste: return "Paste to Finder"
+        case .copy: return "Copy to Clipboard"
+        case .pin: return isPinned ? "Unpin" : "Pin"
+        case .share: return "Share..."
+        case .delete: return "Delete Entry"
+        case .clearAll: return "Clear All History..."
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .paste: return "return"
+        case .copy: return "doc.on.doc"
+        case .pin: return "pin"
+        case .share: return "square.and.arrow.up"
+        case .delete: return "trash"
+        case .clearAll: return "trash"
+        }
+    }
+    
+    var key: String {
+        switch self {
+        case .paste: return ""
+        case .copy: return "⌘C"
+        case .pin: return "⌘P"
+        case .share: return ""
+        case .delete: return "⌃X"
+        case .clearAll: return "⌘⇧⌫"
+        }
+    }
+    
+    var isDestructive: Bool {
+        self == .delete || self == .clearAll
+    }
+    
+    // @note divider shown above this action in the box
+    var hasDividerBefore: Bool {
+        self == .delete
+    }
+}
+
 // @note master-detail clipboard history UI (list on the left, preview + info on the right)
 struct ClipboardHistoryView: View {
     @ObservedObject var service: ClipboardHistoryService
     let entries: [ClipboardEntry]
     @Binding var selectedIndex: Int
     @Binding var showActions: Bool
+    @Binding var actionIndex: Int
     
-    // @note actions (paste/copy hide the window; the rest mutate history in place)
-    var onPaste: (ClipboardEntry) -> Void
-    var onCopy: (ClipboardEntry) -> Void
-    var onTogglePin: (ClipboardEntry) -> Void
-    var onDelete: (ClipboardEntry) -> Void
-    var onClearAll: () -> Void
-    var onShare: (ClipboardEntry, NSView?) -> Void
+    // @note run an action against the currently selected entry
+    var onRunAction: (ClipboardAction) -> Void
     
     @Environment(\.colorScheme) var colorScheme
     
@@ -34,46 +82,64 @@ struct ClipboardHistoryView: View {
             : Color(nsColor: NSColor(white: 0.82, alpha: 1))
     }
     
+    private var actionsBoxColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.17, alpha: 1))
+            : Color(nsColor: NSColor(white: 0.99, alpha: 1))
+    }
+    
+    private var actionHighlightColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.30, alpha: 1))
+            : Color(nsColor: NSColor(calibratedRed: 0.78, green: 0.93, blue: 0.97, alpha: 1))
+    }
+    
     // @note currently detailed entry
     private var selectedEntry: ClipboardEntry? {
         guard selectedIndex >= 0, selectedIndex < entries.count else { return nil }
         return entries[selectedIndex]
     }
     
-    // @note pinned entries (already sorted to the front of results)
     private var pinnedEntries: [(index: Int, entry: ClipboardEntry)] {
         entries.enumerated().filter { $0.element.isPinned }.map { ($0.offset, $0.element) }
     }
     
-    // @note non-pinned entries
     private var recentEntries: [(index: Int, entry: ClipboardEntry)] {
         entries.enumerated().filter { !$0.element.isPinned }.map { ($0.offset, $0.element) }
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            if entries.isEmpty {
-                emptyState
-            } else {
-                HStack(spacing: 0) {
-                    listColumn
-                        .frame(width: 272)
-                    
-                    Rectangle()
-                        .fill(dividerColor)
-                        .frame(width: 1)
-                    
-                    detailColumn
-                        .frame(maxWidth: .infinity)
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                if entries.isEmpty {
+                    emptyState
+                } else {
+                    HStack(spacing: 0) {
+                        listColumn
+                            .frame(width: 272)
+                        
+                        Rectangle()
+                            .fill(dividerColor)
+                            .frame(width: 1)
+                        
+                        detailColumn
+                            .frame(maxWidth: .infinity)
+                    }
+                    .frame(maxHeight: .infinity)
                 }
-                .frame(maxHeight: .infinity)
+                
+                Rectangle()
+                    .fill(dividerColor)
+                    .frame(height: 1)
+                
+                footer
             }
             
-            Rectangle()
-                .fill(dividerColor)
-                .frame(height: 1)
-            
-            footer
+            if showActions {
+                actionsBox
+                    .padding(.trailing, 12)
+                    .padding(.bottom, 42)
+            }
         }
     }
     
@@ -160,7 +226,6 @@ struct ClipboardHistoryView: View {
         .id(entry.id)
     }
     
-    // @note row leading thumbnail/icon
     @ViewBuilder
     private func thumbnail(_ entry: ClipboardEntry) -> some View {
         if entry.type == .image, let image = service.image(for: entry) {
@@ -309,17 +374,33 @@ struct ClipboardHistoryView: View {
         }
     }
     
-    // MARK: - Footer + Actions
+    // MARK: - Footer
     
     private var footer: some View {
         HStack(spacing: 16) {
             Spacer()
             
-            footerHint(label: "Paste to Finder", key: "↵") {
-                if let entry = selectedEntry { onPaste(entry) }
+            footerHint(label: "Copy to Clipboard", key: "↵") {
+                onRunAction(.copy)
             }
             
-            actionsButton
+            Button(action: { showActions.toggle() }) {
+                HStack(spacing: 6) {
+                    Text("Actions")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Text("⌘ K")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(minWidth: 28, minHeight: 18)
+                        .padding(.horizontal, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.secondary.opacity(0.15))
+                        )
+                }
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -345,82 +426,57 @@ struct ClipboardHistoryView: View {
         .buttonStyle(.plain)
     }
     
-    private var actionsButton: some View {
-        Button(action: { showActions.toggle() }) {
-            HStack(spacing: 6) {
-                Text("Actions")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                Text("⌘ K")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .frame(minWidth: 28, minHeight: 18)
-                    .padding(.horizontal, 3)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.secondary.opacity(0.15))
-                    )
-            }
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $showActions, arrowEdge: .bottom) {
-            actionsMenu
-        }
-    }
+    // MARK: - Actions box
     
-    private var actionsMenu: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            actionItem(title: "Paste to Finder", icon: "return", key: "↵") {
-                if let entry = selectedEntry { onPaste(entry) }
-            }
-            actionItem(title: "Copy to Clipboard", icon: "doc.on.doc", key: "⌘C") {
-                if let entry = selectedEntry { onCopy(entry) }
-            }
-            actionItem(title: selectedEntry?.isPinned == true ? "Unpin" : "Pin", icon: "pin", key: "⌘P") {
-                if let entry = selectedEntry { onTogglePin(entry) }
-            }
-            actionItem(title: "Share...", icon: "square.and.arrow.up", key: "") {
-                if let entry = selectedEntry { onShare(entry, nil) }
-            }
-            
-            Divider().padding(.vertical, 4)
-            
-            actionItem(title: "Delete Entry", icon: "trash", key: "⌃X", destructive: true) {
-                if let entry = selectedEntry { onDelete(entry) }
-            }
-            actionItem(title: "Clear All History...", icon: "trash", key: "⌘⇧⌫", destructive: true) {
-                onClearAll()
+    private var actionsBox: some View {
+        let isPinned = selectedEntry?.isPinned ?? false
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(ClipboardAction.allCases.enumerated()), id: \.element) { idx, action in
+                if action.hasDividerBefore {
+                    Divider().padding(.vertical, 4)
+                }
+                actionRow(action, isSelected: idx == actionIndex, isPinned: isPinned)
             }
         }
         .padding(6)
-        .frame(width: 260)
+        .frame(width: 270)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(actionsBoxColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(dividerColor, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 6)
     }
     
-    private func actionItem(title: String, icon: String, key: String, destructive: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: {
-            showActions = false
-            action()
-        }) {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .frame(width: 18)
-                    .foregroundColor(destructive ? .red : .primary)
-                Text(title)
-                    .font(.system(size: 13))
-                    .foregroundColor(destructive ? .red : .primary)
-                Spacer()
-                if !key.isEmpty {
-                    Text(key)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
+    private func actionRow(_ action: ClipboardAction, isSelected: Bool, isPinned: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: action.icon)
+                .font(.system(size: 12))
+                .frame(width: 18)
+                .foregroundColor(action.isDestructive ? .red : .primary)
+            Text(action.title(isPinned: isPinned))
+                .font(.system(size: 13))
+                .foregroundColor(action.isDestructive ? .red : .primary)
+            Spacer()
+            if !action.key.isEmpty {
+                Text(action.key)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 7)
+                .fill(isSelected ? actionHighlightColor : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onRunAction(action)
+        }
     }
     
     // @note shared formatter reused across renders (creation is expensive)

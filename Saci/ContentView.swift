@@ -31,26 +31,12 @@ struct VisualEffectBackground: NSViewRepresentable {
     }
 }
 
-// @note footer menu button with popup
+// @note footer menu button (toggles the floating menu box owned by ContentView)
 struct FooterMenuButton: View {
-    @State private var showMenu = false
-    var onSettings: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-    
-    private var menuBackgroundColor: Color {
-        colorScheme == .dark
-            ? Color(nsColor: NSColor(white: 0.15, alpha: 1))
-            : Color(nsColor: NSColor(white: 0.92, alpha: 1))
-    }
-    
-    // @note get app version from bundle
-    private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-        return "Saci v\(version)"
-    }
+    @Binding var isPresented: Bool
     
     var body: some View {
-        Button(action: { showMenu.toggle() }) {
+        Button(action: { isPresented.toggle() }) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
@@ -61,55 +47,156 @@ struct FooterMenuButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .popover(isPresented: $showMenu, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 0) {
-                // @note version header (dynamic from bundle)
-                Text(appVersion)
+    }
+}
+
+// @note floating footer menu box (version + settings), positioned by its parent
+struct FooterMenuBox: View {
+    var onSettings: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+    
+    private var menuBackgroundColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.17, alpha: 1))
+            : Color(nsColor: NSColor(white: 0.99, alpha: 1))
+    }
+    
+    private var menuBorderColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.25, alpha: 1))
+            : Color(nsColor: NSColor(white: 0.82, alpha: 1))
+    }
+    
+    private var menuRowHoverColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.25, alpha: 1))
+            : Color(nsColor: NSColor(white: 0.92, alpha: 1))
+    }
+    
+    private var dividerColor: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.25, alpha: 1))
+            : Color(nsColor: NSColor(white: 0.82, alpha: 1))
+    }
+    
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        return "Saci v\(version)"
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(appVersion)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            
+            Rectangle()
+                .fill(dividerColor)
+                .frame(height: 1)
+            
+            HoverButton(
+                hoverColor: menuRowHoverColor,
+                action: onSettings
+            ) {
+                HStack(spacing: 8) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 13))
+                        .frame(width: 18)
+                    
+                    Text("Settings")
+                        .font(.system(size: 13))
+                    
+                    Spacer()
+                    
+                    Text("⌘ ,")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+        }
+        .frame(width: 220)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(menuBackgroundColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(menuBorderColor, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 6)
+    }
+}
+
+// @note simple hover-highlight button row used by the footer menu
+private struct HoverButton<Label: View>: View {
+    let hoverColor: Color
+    let action: () -> Void
+    @ViewBuilder let label: () -> Label
+    @State private var isHovered = false
+    
+    var body: some View {
+        Button(action: action) {
+            label()
+                .contentShape(Rectangle())
+                .background(isHovered ? hoverColor : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// @note a single clipboard type filter row with hover + selected states
+private struct ClipboardTypeRow: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    @State private var isHovered = false
+    @Environment(\.colorScheme) var colorScheme
+    
+    private var rowBackground: Color {
+        if isSelected { return Color.accentColor.opacity(0.22) }
+        if isHovered { return Color.secondary.opacity(0.15) }
+        return Color.clear
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .frame(width: 16)
+                    .foregroundColor(isSelected ? .accentColor : .secondary)
+                Text(title)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                
-                Divider()
-                
-                // @note settings button
-                Button(action: {
-                    showMenu = false
-                    onSettings()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 13))
-                            .frame(width: 18)
-                        
-                        Text("Settings")
-                            .font(.system(size: 13))
-                        
-                        Spacer()
-                        
-                        Text("⌘ ,")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .background(Color.clear)
-                .onHover { hovering in
-                    // @note handled by system
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.accentColor)
                 }
             }
-            .frame(width: 200)
-            .background(menuBackgroundColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(rowBackground)
+            )
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
 
 // @note search window footer bar
 struct SearchFooterView: View {
-    var onSettings: () -> Void
+    @Binding var showMenu: Bool
     var enableTransparency: Bool
     var actionText: String = "Open Application"
     @Environment(\.colorScheme) var colorScheme
@@ -130,7 +217,7 @@ struct SearchFooterView: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            FooterMenuButton(onSettings: onSettings)
+            FooterMenuButton(isPresented: $showMenu)
             
             Spacer()
             
@@ -182,6 +269,12 @@ struct ContentView: View {
     @State private var calculatorResult: CalculatorResult?
     // @note clipboard actions popover visibility
     @State private var showClipboardActions = false
+    // @note selected action index in the clipboard actions box
+    @State private var clipboardActionIndex = 0
+    // @note footer menu (version + settings) visibility
+    @State private var showFooterMenu = false
+    // @note clipboard type filter dropdown visibility
+    @State private var showClipboardTypeMenu = false
     @State private var mode: LauncherMode = .search
     @State private var emojiSections: [EmojiSectionData] = []
     @State private var emojiDisplayEntries: [EmojiEntry] = []
@@ -334,30 +427,30 @@ struct ContentView: View {
                 onCommandK: {
                     guard mode == .clipboard else { return false }
                     showClipboardActions.toggle()
+                    if showClipboardActions { clipboardActionIndex = 0 }
                     return true
                 },
                 onCommandC: {
                     guard mode == .clipboard,
                           selectedIndex >= 0, selectedIndex < clipboardService.results.count else { return false }
-                    clipboardCopy(clipboardService.results[selectedIndex])
+                    executeClipboardAction(.copy)
                     return true
                 },
                 onCommandP: {
                     guard mode == .clipboard,
                           selectedIndex >= 0, selectedIndex < clipboardService.results.count else { return false }
-                    clipboardService.togglePin(clipboardService.results[selectedIndex])
+                    executeClipboardAction(.pin)
                     return true
                 },
                 onControlX: {
                     guard mode == .clipboard,
                           selectedIndex >= 0, selectedIndex < clipboardService.results.count else { return false }
-                    clipboardDelete(clipboardService.results[selectedIndex])
+                    executeClipboardAction(.delete)
                     return true
                 },
                 onCommandShiftDelete: {
                     guard mode == .clipboard else { return false }
-                    clipboardService.clearHistory()
-                    selectedIndex = 0
+                    executeClipboardAction(.clearAll)
                     return true
                 }
             )
@@ -435,12 +528,8 @@ struct ContentView: View {
                         entries: clipboardService.results,
                         selectedIndex: $selectedIndex,
                         showActions: $showClipboardActions,
-                        onPaste: { entry in clipboardPaste(entry) },
-                        onCopy: { entry in clipboardCopy(entry) },
-                        onTogglePin: { entry in clipboardService.togglePin(entry) },
-                        onDelete: { entry in clipboardDelete(entry) },
-                        onClearAll: { clipboardService.clearHistory() },
-                        onShare: { entry, _ in clipboardShare(entry) }
+                        actionIndex: $clipboardActionIndex,
+                        onRunAction: { action in executeClipboardAction(action) }
                     )
                     .frame(maxHeight: .infinity)
                 } else {
@@ -476,7 +565,7 @@ struct ContentView: View {
                         .frame(height: 1)
                     
                     SearchFooterView(
-                        onSettings: openSettings,
+                        showMenu: $showFooterMenu,
                         enableTransparency: settings.enableTransparency,
                         actionText: footerActionText
                     )
@@ -491,6 +580,35 @@ struct ContentView: View {
                     }
             }
             
+            // @note dismiss footer menu when clicking elsewhere
+            if showFooterMenu {
+                Color.black.opacity(0.001)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showFooterMenu = false
+                    }
+            }
+            
+            // @note dismiss clipboard type menu when clicking elsewhere
+            if mode == .clipboard && showClipboardTypeMenu {
+                Color.black.opacity(0.001)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showClipboardTypeMenu = false
+                    }
+            }
+            
+            // @note floating footer menu box, anchored bottom-left above the footer
+            if showFooterMenu {
+                FooterMenuBox(onSettings: {
+                    showFooterMenu = false
+                    openSettings()
+                })
+                .padding(.leading, 8)
+                .padding(.bottom, 52)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            }
+            
             if mode == .emoji {
                 emojiCategoryDropdown
                     .padding(.trailing, 16)
@@ -500,7 +618,7 @@ struct ContentView: View {
             if mode == .clipboard {
                 clipboardTypeFilter
                     .padding(.trailing, 16)
-                    .padding(.top, 16)
+                    .padding(.top, 14)
             }
         }
         .frame(width: 680, height: panelHeight, alignment: .top)
@@ -740,6 +858,10 @@ struct ContentView: View {
     
     // @note handle arrow up
     private func handleArrowUp() -> Bool {
+        if mode == .clipboard && showClipboardActions {
+            moveActionSelection(by: -1)
+            return true
+        }
         if mode == .search {
             moveSelection(by: -1)
             return true
@@ -753,6 +875,10 @@ struct ContentView: View {
     
     // @note handle arrow down
     private func handleArrowDown() -> Bool {
+        if mode == .clipboard && showClipboardActions {
+            moveActionSelection(by: 1)
+            return true
+        }
         if mode == .search {
             moveSelection(by: 1)
             return true
@@ -766,6 +892,10 @@ struct ContentView: View {
     
     // @note handle escape key
     private func handleEscape() {
+        if mode == .clipboard && showClipboardActions {
+            showClipboardActions = false
+            return
+        }
         if mode == .emoji {
             exitEmojiLibrary()
         } else if mode == .clipboard {
@@ -801,7 +931,12 @@ struct ContentView: View {
     private func handleSubmit() {
         if mode == .emoji { return }
         if mode == .clipboard {
-            restoreSelectedClipboardEntry()
+            if showClipboardActions {
+                runSelectedClipboardAction()
+                return
+            }
+            // @note Enter copies the selected entry, closes, and moves it to the top (no auto-paste)
+            executeClipboardAction(.copy)
             return
         }
         if isCalculatorSelected {
@@ -849,6 +984,49 @@ struct ContentView: View {
         guard !clipboardService.results.isEmpty else { return }
         let maxIndex = clipboardService.results.count - 1
         selectedIndex = max(0, min(maxIndex, selectedIndex + delta))
+    }
+    
+    // @note move action box selection up or down
+    // @param delta direction to move (-1 up, 1 down)
+    private func moveActionSelection(by delta: Int) {
+        let count = ClipboardAction.allCases.count
+        clipboardActionIndex = (clipboardActionIndex + delta + count) % count
+    }
+    
+    // @note run the action currently highlighted in the actions box
+    private func runSelectedClipboardAction() {
+        let actions = ClipboardAction.allCases
+        guard clipboardActionIndex >= 0, clipboardActionIndex < actions.count else { return }
+        executeClipboardAction(actions[clipboardActionIndex])
+    }
+    
+    // @note dispatch a clipboard action against the currently selected entry
+    // @param action action to perform
+    private func executeClipboardAction(_ action: ClipboardAction) {
+        // @note clear-all does not require a selected entry
+        if action == .clearAll {
+            clipboardService.clearHistory()
+            selectedIndex = 0
+            showClipboardActions = false
+            return
+        }
+        guard selectedIndex >= 0, selectedIndex < clipboardService.results.count else { return }
+        let entry = clipboardService.results[selectedIndex]
+        showClipboardActions = false
+        switch action {
+        case .paste:
+            clipboardPaste(entry)
+        case .copy:
+            clipboardCopy(entry)
+        case .pin:
+            clipboardService.togglePin(entry)
+        case .share:
+            clipboardShare(entry)
+        case .delete:
+            clipboardDelete(entry)
+        case .clearAll:
+            break
+        }
     }
     
     // @note restore selected clipboard entry (paste action)
@@ -919,24 +1097,78 @@ struct ContentView: View {
         keyVUp?.post(tap: .cghidEventTap)
     }
     
-    // @note clipboard type filter dropdown (All Types / Text / Link / Image)
+    // @note clipboard type filter custom dropdown (All Types / Text / Link / Image)
     private var clipboardTypeFilter: some View {
-        Menu {
-            Button("All Types") { setClipboardTypeFilter(nil) }
-            Button("Text") { setClipboardTypeFilter(.text) }
-            Button("Link") { setClipboardTypeFilter(.url) }
-            Button("Image") { setClipboardTypeFilter(.image) }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 11, weight: .medium))
-                Text(clipboardService.typeFilter?.displayName ?? "All Types")
-                    .font(.system(size: 12, weight: .medium))
+        VStack(alignment: .trailing, spacing: 6) {
+            Button(action: { showClipboardTypeMenu.toggle() }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .font(.system(size: 11, weight: .medium))
+                    Text(clipboardService.typeFilter?.displayName ?? "All Types")
+                        .font(.system(size: 12, weight: .medium))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .rotationEffect(.degrees(showClipboardTypeMenu ? 180 : 0))
+                }
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(clipboardFilterBackground)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                )
             }
-            .foregroundColor(.secondary)
+            .buttonStyle(.plain)
+            .fixedSize()
+            
+            if showClipboardTypeMenu {
+                clipboardTypeList
+            }
         }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
+    }
+    
+    // @note dropdown list of type options
+    private var clipboardTypeList: some View {
+        VStack(spacing: 2) {
+            clipboardTypeRow("All Types", type: nil, icon: "square.grid.2x2")
+            clipboardTypeRow("Text", type: .text, icon: "doc.text")
+            clipboardTypeRow("Link", type: .url, icon: "link")
+            clipboardTypeRow("Image", type: .image, icon: "photo")
+        }
+        .padding(6)
+        .frame(width: 168)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(dropdownBackgroundColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(dropdownBorderColor, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
+    }
+    
+    // @note a single type filter row
+    private func clipboardTypeRow(_ title: String, type: ClipboardItemType?, icon: String) -> some View {
+        ClipboardTypeRow(
+            title: title,
+            icon: icon,
+            isSelected: clipboardService.typeFilter == type
+        ) {
+            setClipboardTypeFilter(type)
+            showClipboardTypeMenu = false
+        }
+    }
+    
+    // @note darker background behind the type filter
+    private var clipboardFilterBackground: Color {
+        colorScheme == .dark
+            ? Color(nsColor: NSColor(white: 0.0, alpha: 0.28))
+            : Color(nsColor: NSColor(white: 0.0, alpha: 0.08))
     }
     
     // @note apply a type filter and reset selection
@@ -1135,6 +1367,8 @@ struct ContentView: View {
         showEmojiCategoryMenu = false
         copiedEmojiToken = nil
         showClipboardActions = false
+        clipboardActionIndex = 0
+        showClipboardTypeMenu = false
         clipboardService.setTypeFilter(nil)
         clipboardService.search(query: "")
         NotificationCenter.default.post(name: .clipboardHistoryDidEnter, object: nil)
@@ -1165,6 +1399,9 @@ struct ContentView: View {
         clipboardService.clearResults()
         showCopiedFeedback = false
         showEmojiCategoryMenu = false
+        showFooterMenu = false
+        showClipboardActions = false
+        showClipboardTypeMenu = false
         copiedEmojiToken = nil
         searchService.clearResults()
         NotificationCenter.default.post(name: .emojiLibraryDidExit, object: nil)
