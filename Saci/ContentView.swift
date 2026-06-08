@@ -180,6 +180,8 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var selectedIndex = 0
     @State private var calculatorResult: CalculatorResult?
+    // @note clipboard actions popover visibility
+    @State private var showClipboardActions = false
     @State private var mode: LauncherMode = .search
     @State private var emojiSections: [EmojiSectionData] = []
     @State private var emojiDisplayEntries: [EmojiEntry] = []
@@ -212,7 +214,8 @@ struct ContentView: View {
             return true
         }
         if mode == .clipboard {
-            return true
+            // @note clipboard view renders its own footer
+            return false
         }
         return !currentResults.isEmpty || calculatorResult != nil
     }
@@ -327,6 +330,35 @@ struct ContentView: View {
                 },
                 onCommandNumber: { index in
                     launchAppAtIndex(index)
+                },
+                onCommandK: {
+                    guard mode == .clipboard else { return false }
+                    showClipboardActions.toggle()
+                    return true
+                },
+                onCommandC: {
+                    guard mode == .clipboard,
+                          selectedIndex >= 0, selectedIndex < clipboardService.results.count else { return false }
+                    clipboardCopy(clipboardService.results[selectedIndex])
+                    return true
+                },
+                onCommandP: {
+                    guard mode == .clipboard,
+                          selectedIndex >= 0, selectedIndex < clipboardService.results.count else { return false }
+                    clipboardService.togglePin(clipboardService.results[selectedIndex])
+                    return true
+                },
+                onControlX: {
+                    guard mode == .clipboard,
+                          selectedIndex >= 0, selectedIndex < clipboardService.results.count else { return false }
+                    clipboardDelete(clipboardService.results[selectedIndex])
+                    return true
+                },
+                onCommandShiftDelete: {
+                    guard mode == .clipboard else { return false }
+                    clipboardService.clearHistory()
+                    selectedIndex = 0
+                    return true
                 }
             )
                 
@@ -338,11 +370,9 @@ struct ContentView: View {
                             .frame(height: 1)
                     }
                 } else if mode == .clipboard {
-                    if !clipboardService.results.isEmpty {
-                        Rectangle()
-                            .fill(dividerColor)
-                            .frame(height: 1)
-                    }
+                    Rectangle()
+                        .fill(dividerColor)
+                        .frame(height: 1)
                 } else if !currentResults.isEmpty || calculatorResult != nil {
                     Rectangle()
                         .fill(dividerColor)
@@ -400,10 +430,17 @@ struct ContentView: View {
                         .frame(maxHeight: .infinity)
                     }
                 } else if mode == .clipboard {
-                    ClipboardHistoryListView(
+                    ClipboardHistoryView(
+                        service: clipboardService,
                         entries: clipboardService.results,
                         selectedIndex: $selectedIndex,
-                        onSelect: restoreClipboardEntry
+                        showActions: $showClipboardActions,
+                        onPaste: { entry in clipboardPaste(entry) },
+                        onCopy: { entry in clipboardCopy(entry) },
+                        onTogglePin: { entry in clipboardService.togglePin(entry) },
+                        onDelete: { entry in clipboardDelete(entry) },
+                        onClearAll: { clipboardService.clearHistory() },
+                        onShare: { entry, _ in clipboardShare(entry) }
                     )
                     .frame(maxHeight: .infinity)
                 } else {
@@ -458,6 +495,12 @@ struct ContentView: View {
                 emojiCategoryDropdown
                     .padding(.trailing, 16)
                     .padding(.top, 14)
+            }
+            
+            if mode == .clipboard {
+                clipboardTypeFilter
+                    .padding(.trailing, 16)
+                    .padding(.top, 16)
             }
         }
         .frame(width: 680, height: panelHeight, alignment: .top)
@@ -808,10 +851,10 @@ struct ContentView: View {
         selectedIndex = max(0, min(maxIndex, selectedIndex + delta))
     }
     
-    // @note restore selected clipboard entry
+    // @note restore selected clipboard entry (paste action)
     private func restoreSelectedClipboardEntry() {
         guard selectedIndex >= 0 && selectedIndex < clipboardService.results.count else { return }
-        restoreClipboardEntry(clipboardService.results[selectedIndex])
+        clipboardPaste(clipboardService.results[selectedIndex])
     }
     
     // @note copy clipboard history entry back to pasteboard
@@ -819,6 +862,88 @@ struct ContentView: View {
     private func restoreClipboardEntry(_ entry: ClipboardEntry) {
         clipboardService.restore(entry)
         hideWindow()
+    }
+    
+    // @note paste action: copy entry to pasteboard, hide, then paste into the previous app
+    // @param entry clipboard entry to paste
+    private func clipboardPaste(_ entry: ClipboardEntry) {
+        clipboardService.restore(entry)
+        hideWindow()
+        // @note give focus time to return to the previous app, then synthesize Cmd+V
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            Self.simulatePaste()
+        }
+    }
+    
+    // @note copy entry to the clipboard and close (no auto-paste)
+    // @param entry clipboard entry to copy
+    private func clipboardCopy(_ entry: ClipboardEntry) {
+        clipboardService.restore(entry)
+        hideWindow()
+    }
+    
+    // @note delete an entry and keep the selection in bounds
+    // @param entry clipboard entry to delete
+    private func clipboardDelete(_ entry: ClipboardEntry) {
+        clipboardService.delete(entry)
+        let count = clipboardService.results.count
+        if count == 0 {
+            selectedIndex = 0
+        } else if selectedIndex >= count {
+            selectedIndex = count - 1
+        }
+    }
+    
+    // @note share an entry via the system share sheet
+    // @param entry clipboard entry to share
+    private func clipboardShare(_ entry: ClipboardEntry) {
+        var items: [Any] = []
+        if entry.type == .image, let image = clipboardService.image(for: entry) {
+            items = [image]
+        } else {
+            items = [entry.content]
+        }
+        guard !items.isEmpty, let view = NSApp.keyWindow?.contentView else { return }
+        let picker = NSSharingServicePicker(items: items)
+        picker.show(relativeTo: .zero, of: view, preferredEdge: .minY)
+    }
+    
+    // @note synthesize a Cmd+V keystroke to paste into the frontmost app
+    private static func simulatePaste() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let keyVDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
+        keyVDown?.flags = .maskCommand
+        let keyVUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+        keyVUp?.flags = .maskCommand
+        keyVDown?.post(tap: .cghidEventTap)
+        keyVUp?.post(tap: .cghidEventTap)
+    }
+    
+    // @note clipboard type filter dropdown (All Types / Text / Link / Image)
+    private var clipboardTypeFilter: some View {
+        Menu {
+            Button("All Types") { setClipboardTypeFilter(nil) }
+            Button("Text") { setClipboardTypeFilter(.text) }
+            Button("Link") { setClipboardTypeFilter(.url) }
+            Button("Image") { setClipboardTypeFilter(.image) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .font(.system(size: 11, weight: .medium))
+                Text(clipboardService.typeFilter?.displayName ?? "All Types")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundColor(.secondary)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+    
+    // @note apply a type filter and reset selection
+    // @param type type to filter by, or nil for all
+    private func setClipboardTypeFilter(_ type: ClipboardItemType?) {
+        clipboardService.setTypeFilter(type)
+        selectedIndex = 0
     }
     
     // @note copy calculator result to clipboard
@@ -1009,6 +1134,8 @@ struct ContentView: View {
         showCopiedFeedback = false
         showEmojiCategoryMenu = false
         copiedEmojiToken = nil
+        showClipboardActions = false
+        clipboardService.setTypeFilter(nil)
         clipboardService.search(query: "")
         NotificationCenter.default.post(name: .clipboardHistoryDidEnter, object: nil)
     }
@@ -1073,6 +1200,12 @@ struct SearchTextField: NSViewRepresentable {
     var onSubmit: () -> Void
     var onCommandComma: () -> Void
     var onCommandNumber: (Int) -> Void
+    // @note clipboard-mode shortcuts (return true when handled)
+    var onCommandK: () -> Bool = { false }
+    var onCommandC: () -> Bool = { false }
+    var onCommandP: () -> Bool = { false }
+    var onControlX: () -> Bool = { false }
+    var onCommandShiftDelete: () -> Bool = { false }
     
     func makeNSView(context: Context) -> NSView {
         let containerView = SaciSearchContainerView()
@@ -1093,6 +1226,11 @@ struct SearchTextField: NSViewRepresentable {
         textField.onArrowDown = onArrowDown
         textField.onCommandComma = onCommandComma
         textField.onCommandNumber = onCommandNumber
+        textField.onCommandK = onCommandK
+        textField.onCommandC = onCommandC
+        textField.onCommandP = onCommandP
+        textField.onControlX = onControlX
+        textField.onCommandShiftDelete = onCommandShiftDelete
         textField.stringValue = text
         textField.placeholderString = placeholder
         textField.isBordered = false
@@ -1164,6 +1302,11 @@ struct SearchTextField: NSViewRepresentable {
             textField.onArrowDown = onArrowDown
             textField.onCommandComma = onCommandComma
             textField.onCommandNumber = onCommandNumber
+            textField.onCommandK = onCommandK
+            textField.onCommandC = onCommandC
+            textField.onCommandP = onCommandP
+            textField.onControlX = onControlX
+            textField.onCommandShiftDelete = onCommandShiftDelete
             textField.textColor = .labelColor
             textField.placeholderString = placeholder
         }
@@ -1307,6 +1450,11 @@ class SaciTextField: NSTextField {
     var onArrowDown: (() -> Bool)?
     var onCommandComma: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
+    var onCommandK: (() -> Bool)?
+    var onCommandC: (() -> Bool)?
+    var onCommandP: (() -> Bool)?
+    var onControlX: (() -> Bool)?
+    var onCommandShiftDelete: (() -> Bool)?
     
     // @note number key codes (1-9) for quick app launch
     private let numberKeyCodes: [UInt16: Int] = [
@@ -1322,6 +1470,12 @@ class SaciTextField: NSTextField {
             return true
         }
         
+        // @note Control+X (delete entry, clipboard mode)
+        if event.modifierFlags.contains(.control),
+           event.charactersIgnoringModifiers?.lowercased() == "x" {
+            if onControlX?() == true { return true }
+        }
+        
         if event.modifierFlags.contains(.command) {
             // @note handle Cmd+, for settings
             if event.charactersIgnoringModifiers == "," {
@@ -1329,10 +1483,27 @@ class SaciTextField: NSTextField {
                 return true
             }
             
+            // @note Cmd+Shift+Delete (clear all history, clipboard mode)
+            if event.modifierFlags.contains(.shift), event.keyCode == 51 {
+                if onCommandShiftDelete?() == true { return true }
+            }
+            
             // @note handle Cmd+number (1-9) for quick app launch
             if let number = numberKeyCodes[event.keyCode] {
                 onCommandNumber?(number - 1) // convert to 0-based index
                 return true
+            }
+            
+            // @note clipboard-mode command shortcuts (only handled in clipboard mode)
+            switch event.charactersIgnoringModifiers?.lowercased() {
+            case "k":
+                if onCommandK?() == true { return true }
+            case "c":
+                if onCommandC?() == true { return true }
+            case "p":
+                if onCommandP?() == true { return true }
+            default:
+                break
             }
         }
         return super.performKeyEquivalent(with: event)
