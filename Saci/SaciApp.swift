@@ -39,6 +39,27 @@ class SaciPanel: NSPanel {
     }
 }
 
+// @note shared launcher dimensions and screen placement
+struct LauncherLayout {
+    static let panelWidth: CGFloat = 680
+    static let compactHeight: CGFloat = 100
+    static let expandedHeight: CGFloat = 460
+
+    // @note center the launcher and keep it within the usable screen area
+    // @param visibleFrame usable screen frame excluding the menu bar and Dock
+    // @param size target panel size
+    static func frame(in visibleFrame: NSRect, size: NSSize) -> NSRect {
+        let proposedX = visibleFrame.midX - size.width / 2
+        let proposedY = visibleFrame.midY - size.height / 2
+        let maxX = max(visibleFrame.minX, visibleFrame.maxX - size.width)
+        let maxY = max(visibleFrame.minY, visibleFrame.maxY - size.height)
+        let x = min(max(proposedX, visibleFrame.minX), maxX)
+        let y = min(max(proposedY, visibleFrame.minY), maxY)
+
+        return NSRect(x: x, y: y, width: size.width, height: size.height)
+    }
+}
+
 // @note app delegate to handle window configuration, hotkey and status bar
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     var hotkeyManager = HotkeyManager.shared
@@ -49,7 +70,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     var localMouseEventMonitor: Any?
     var globalEventMonitor: Any?
     private var errorCancellable: AnyCancellable?
-    private var panelHeight: CGFloat = 100
+    private var panelHeight: CGFloat = LauncherLayout.compactHeight
     
     // @note flag to prevent panel closing when transitioning to child windows (settings, etc.)
     private var isTransitioningToChildWindow = false
@@ -370,7 +391,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         )
         
         mainPanel = SaciPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 680, height: 100),
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: LauncherLayout.panelWidth,
+                height: LauncherLayout.compactHeight
+            ),
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -421,7 +447,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         panel.hidesOnDeactivate = false
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = true
-        panel.center()
     }
     
     // @note open settings window
@@ -489,32 +514,36 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
         }
     }
     
+    // @note screen containing the pointer for predictable multi-display placement
+    private var pointerScreen: NSScreen? {
+        let mouseLocation = NSEvent.mouseLocation
+        return NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) })
+            ?? NSScreen.main
+    }
+
+    // @note calculate a launcher frame for the target screen and height
+    // @param screen screen where the launcher should appear
+    // @param height desired panel height
+    private func launcherFrame(on screen: NSScreen, height: CGFloat) -> NSRect {
+        LauncherLayout.frame(
+            in: screen.visibleFrame,
+            size: NSSize(width: LauncherLayout.panelWidth, height: height)
+        )
+    }
+
     // @note show the main panel without stealing focus from other apps
     private func showPanel() {
         guard let panel = mainPanel else { return }
-        
+
         // @note notify that panel will show (for state reset)
         NotificationCenter.default.post(name: .saciWindowWillShow, object: nil)
-        
-        // @note use stored height to ensure consistent positioning
-        let initialHeight: CGFloat = panelHeight
-        
-        if let screen = NSScreen.main {
-            let screenFrame = screen.visibleFrame
-            let panelWidth = panel.frame.width
-            
-            // @note calculate center position of screen
-            let centerX = screenFrame.midX - panelWidth / 2
-            let screenCenterY = screenFrame.midY
-            
-            // @note move down from center by 15% of screen height
-            let windowCenterY = screenCenterY - (screenFrame.height * 0.15)
-            
-            panel.setFrame(NSRect(x: centerX, y: windowCenterY, width: panelWidth, height: initialHeight), display: false)
+
+        if let screen = pointerScreen {
+            panel.setFrame(launcherFrame(on: screen, height: panelHeight), display: false)
         } else {
             panel.center()
         }
-        
+
         panel.makeKeyAndOrderFront(nil)
     }
     
@@ -522,44 +551,39 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     private func hidePanel() {
         mainPanel?.orderOut(nil)
         NotificationCenter.default.post(name: .saciWindowDidHide, object: nil)
-        panelHeight = 100
+        panelHeight = LauncherLayout.compactHeight
     }
 
     // @note resize panel for emoji library
     @objc private func emojiLibraryDidEnter() {
-        panelHeight = 460
+        panelHeight = LauncherLayout.expandedHeight
         resizePanel(height: panelHeight)
     }
     
     // @note resize panel back to default
     @objc private func emojiLibraryDidExit() {
-        panelHeight = 100
+        panelHeight = LauncherLayout.compactHeight
         resizePanel(height: panelHeight)
     }
     
     // @note resize panel for clipboard history
     @objc private func clipboardHistoryDidEnter() {
-        panelHeight = 460
+        panelHeight = LauncherLayout.expandedHeight
         resizePanel(height: panelHeight)
     }
     
     // @note resize panel back to default
     @objc private func clipboardHistoryDidExit() {
-        panelHeight = 100
+        panelHeight = LauncherLayout.compactHeight
         resizePanel(height: panelHeight)
     }
     
-    // @note resize panel while keeping position
+    // @note resize panel while preserving its centered screen position
     // @param height desired panel height
     private func resizePanel(height: CGFloat) {
-        guard let panel = mainPanel else { return }
-        let currentFrame = panel.frame
-        let newFrame = NSRect(
-            x: currentFrame.origin.x,
-            y: currentFrame.origin.y - (height - currentFrame.height),
-            width: currentFrame.width,
-            height: height
-        )
+        guard let panel = mainPanel,
+              let screen = panel.screen ?? pointerScreen else { return }
+        let newFrame = launcherFrame(on: screen, height: height)
         panel.setFrame(newFrame, display: true, animate: true)
     }
     
@@ -581,7 +605,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note show emoji library directly
     private func showEmojiLibrary() {
-        panelHeight = 460
+        panelHeight = LauncherLayout.expandedHeight
         if mainPanel?.isVisible != true {
             showPanel()
         }
@@ -590,7 +614,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     
     // @note show clipboard history directly
     private func showClipboardHistory() {
-        panelHeight = 460
+        panelHeight = LauncherLayout.expandedHeight
         if mainPanel?.isVisible != true {
             showPanel()
         }

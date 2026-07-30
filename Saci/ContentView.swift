@@ -344,13 +344,9 @@ struct ContentView: View {
             : Color(nsColor: NSColor(white: 0.95, alpha: 1))
     }
 
-    // @note fixed height for emoji mode
-    private var emojiPanelHeight: CGFloat {
-        460
-    }
-    
-    private var clipboardPanelHeight: CGFloat {
-        460
+    // @note fixed height for expanded launcher modes
+    private var expandedPanelHeight: CGFloat {
+        LauncherLayout.expandedHeight
     }
 
     // @note emoji category dropdown sizing
@@ -621,7 +617,7 @@ struct ContentView: View {
                     .padding(.top, 14)
             }
         }
-        .frame(width: 680, height: panelHeight, alignment: .top)
+        .frame(width: LauncherLayout.panelWidth, height: panelHeight, alignment: .top)
         .background {
             if settings.enableTransparency {
                 ZStack {
@@ -764,8 +760,7 @@ struct ContentView: View {
     private var panelHeight: CGFloat? {
         switch mode {
         case .search: return nil
-        case .emoji: return emojiPanelHeight
-        case .clipboard: return clipboardPanelHeight
+        case .emoji, .clipboard: return expandedPanelHeight
         }
     }
     
