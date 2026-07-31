@@ -45,7 +45,7 @@ struct SettingsRow<Content: View>: View {
             
             Spacer()
         }
-        .frame(height: 24)
+        .frame(minHeight: 28)
     }
 }
 
@@ -99,7 +99,6 @@ struct SettingsView: View {
             SettingsWindowBackground(enableTransparency: settings.enableTransparency)
             
             VStack(spacing: 0) {
-                // @note tab content
                 Group {
                     switch selectedTab {
                     case .general:
@@ -112,23 +111,23 @@ struct SettingsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 
-                Spacer()
-                
-                // @note footer
-                Divider()
-                
-                Text(appVersion)
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                settingsFooter
             }
         }
-        .frame(width: 450, height: 340)
+        .frame(width: settingsWindowWidth, height: settingsWindowHeight)
         .onAppear {
             settings.syncLaunchAtLogin()
             launchAtLogin = settings.launchAtLogin
         }
+    }
+    
+    // @note slightly roomier window on Liquid Glass for toolbar chrome
+    private var settingsWindowWidth: CGFloat {
+        LauncherChrome.usesLiquidGlass ? 480 : 450
+    }
+    
+    private var settingsWindowHeight: CGFloat {
+        LauncherChrome.usesLiquidGlass ? 360 : 340
     }
     
     // @note get app version from bundle
@@ -137,10 +136,49 @@ struct SettingsView: View {
         return "Saci v\(version)"
     }
     
+    private var settingsFooter: some View {
+        VStack(spacing: 0) {
+            Divider()
+            Text(appVersion)
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, LauncherChrome.usesLiquidGlass ? 10 : 8)
+        }
+    }
+    
+    // @note wrap tab rows in a soft card on Liquid Glass; plain stack elsewhere
+    @ViewBuilder
+    private func settingsSection<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if LauncherChrome.usesLiquidGlass {
+            VStack(spacing: 14) {
+                content()
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.primary.opacity(0.04))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            )
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+        } else {
+            VStack(spacing: 12) {
+                content()
+            }
+            .padding(.vertical, 20)
+            .padding(.horizontal, 24)
+        }
+    }
+    
     // @note general settings tab content
     private var generalTab: some View {
-        VStack(spacing: 12) {
-            // @note hotkey picker
+        settingsSection {
             SettingsRow("Hotkey:") {
                 Picker("", selection: $selectedHotkey) {
                     ForEach(HotkeyOption.allCases, id: \.self) { option in
@@ -154,7 +192,6 @@ struct SettingsView: View {
                 }
             }
             
-            // @note launch at login toggle
             SettingsRow("Launch at Login:") {
                 Toggle("", isOn: $launchAtLogin)
                     .labelsHidden()
@@ -164,14 +201,11 @@ struct SettingsView: View {
                     }
             }
         }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 24)
     }
     
     // @note appearance settings tab content
     private var appearanceTab: some View {
-        VStack(spacing: 12) {
-            // @note theme picker
+        settingsSection {
             SettingsRow("Appearance:") {
                 Picker("", selection: $selectedTheme) {
                     ForEach(AppTheme.allCases, id: \.self) { theme in
@@ -185,7 +219,6 @@ struct SettingsView: View {
                 }
             }
             
-            // @note transparency / glass toggle
             SettingsRow(LauncherChrome.usesLiquidGlass ? "Glass:" : "Transparency:") {
                 HStack(spacing: 8) {
                     Toggle("", isOn: $enableTransparency)
@@ -196,31 +229,27 @@ struct SettingsView: View {
                         }
                     
                     Text(LauncherChrome.usesLiquidGlass
-                         ? "Enable Liquid Glass backgrounds"
+                         ? "Enable Liquid Glass on the launcher"
                          : "Enable window transparency")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
             }
             
-            // @note description
             SettingsRow("") {
                 Text(LauncherChrome.usesLiquidGlass
-                     ? "Glass uses the system Liquid Glass material. Disable for solid backgrounds."
+                     ? "Applies Liquid Glass to the launcher panel. Settings uses the system window style."
                      : "Transparency adds a blur effect behind windows. Disable for solid backgrounds.")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 24)
     }
     
     // @note shortcut settings tab content
     private var shortcutTab: some View {
-        VStack(spacing: 12) {
-            // @note emoji library hotkey picker
+        settingsSection {
             SettingsRow("Emoji Library:") {
                 Picker("", selection: $selectedEmojiHotkey) {
                     ForEach(EmojiHotkeyOption.allCases, id: \.self) { option in
@@ -270,8 +299,6 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 24)
     }
     
     // @note apply editable clipboard history limit within allowed range
@@ -344,24 +371,40 @@ class SettingsWindowController: NSObject, NSWindowDelegate {
     func createWindow() -> NSWindow {
         // @note reuse existing window if available
         if let existingWindow = window {
-            // @note refresh content view to ensure it displays properly
+            if #available(macOS 26, *) {
+                // @note drop fullSizeContentView from earlier sessions so chrome isn't clipped oddly
+                existingWindow.styleMask = [.titled, .closable]
+            }
             refreshContentView()
+            applyWindowChrome(to: existingWindow)
+            existingWindow.setContentSize(NSSize(
+                width: LauncherChrome.usesLiquidGlass ? 480 : 450,
+                height: LauncherChrome.usesLiquidGlass ? 360 : 340
+            ))
             return existingWindow
         }
         
+        let contentWidth: CGFloat = LauncherChrome.usesLiquidGlass ? 480 : 450
+        let contentHeight: CGFloat = LauncherChrome.usesLiquidGlass ? 360 : 340
+        
+        // @note avoid fullSizeContentView on Liquid Glass — lets system preference chrome render cleanly
+        var style: NSWindow.StyleMask = [.titled, .closable]
+        if !LauncherChrome.usesLiquidGlass {
+            style.insert(.fullSizeContentView)
+        }
+        
         let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 450, height: 260),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight),
+            styleMask: style,
             backing: .buffered,
             defer: false
         )
         
         newWindow.title = "Saci Settings"
         newWindow.isReleasedWhenClosed = false
-        newWindow.titlebarAppearsTransparent = false
         newWindow.toolbarStyle = .preference
+        applyWindowChrome(to: newWindow)
         
-        // @note create toolbar
         let toolbar = NSToolbar(identifier: "SettingsToolbar")
         toolbar.displayMode = .iconAndLabel
         
@@ -376,11 +419,23 @@ class SettingsWindowController: NSObject, NSWindowDelegate {
         toolbar.selectedItemIdentifier = selectedTab.toolbarIdentifier
         newWindow.toolbar = toolbar
         
-        // @note create content view
         createContentView(for: newWindow)
         
         self.window = newWindow
         return newWindow
+    }
+    
+    // @note system window materials on macOS 26+; legacy clear/blur elsewhere
+    // @param window settings window to configure
+    private func applyWindowChrome(to window: NSWindow) {
+        if #available(macOS 26, *) {
+            window.titlebarAppearsTransparent = false
+            window.isOpaque = true
+            window.backgroundColor = .windowBackgroundColor
+            window.toolbarStyle = .preference
+        } else {
+            window.titlebarAppearsTransparent = false
+        }
     }
     
     // @note update content view when tab changes
@@ -405,6 +460,10 @@ class SettingsWindowController: NSObject, NSWindowDelegate {
         let settingsView = SettingsView(settings: settings, selectedTab: binding)
         hostingView = NSHostingView(rootView: settingsView)
         window.contentView = hostingView
+        window.setContentSize(NSSize(
+            width: LauncherChrome.usesLiquidGlass ? 480 : 450,
+            height: LauncherChrome.usesLiquidGlass ? 360 : 340
+        ))
     }
     
     // @note refresh hosting view with new root view
@@ -431,9 +490,16 @@ class SettingsWindowController: NSObject, NSWindowDelegate {
         }
     }
     
-    // @note apply transparency to window
+    // @note apply transparency to window (launcher-oriented on macOS 26+)
     func applyTransparency() {
         guard let window = window else { return }
+        
+        // @note Tahoe settings use system window materials; don't clear the window
+        if #available(macOS 26, *) {
+            applyWindowChrome(to: window)
+            return
+        }
+        
         let settings = AppSettings.shared
         if settings.enableTransparency {
             window.isOpaque = false

@@ -111,7 +111,7 @@ struct LauncherBackground: View {
     }
 }
 
-// @note full-bleed settings window background (no clipped corner mask)
+// @note settings window background — system materials on macOS 26+, blur/solid elsewhere
 struct SettingsWindowBackground: View {
     var enableTransparency: Bool
     @Environment(\.colorScheme) private var colorScheme
@@ -124,20 +124,18 @@ struct SettingsWindowBackground: View {
     
     @ViewBuilder
     var body: some View {
-        if enableTransparency {
-            if #available(macOS 26, *) {
-                Color.clear
-                    .glassEffect(.regular)
-                    .ignoresSafeArea()
-            } else {
-                VisualEffectBackground(
-                    material: .sidebar,
-                    blendingMode: .behindWindow,
-                    cornerRadius: 0,
-                    opacity: 1.0
-                )
+        if #available(macOS 26, *) {
+            // @note preference windows get Liquid Glass from system chrome; avoid custom glass fills
+            Color(nsColor: .windowBackgroundColor)
                 .ignoresSafeArea()
-            }
+        } else if enableTransparency {
+            VisualEffectBackground(
+                material: .sidebar,
+                blendingMode: .behindWindow,
+                cornerRadius: 0,
+                opacity: 1.0
+            )
+            .ignoresSafeArea()
         } else {
             solidColor.ignoresSafeArea()
         }

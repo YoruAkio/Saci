@@ -31,29 +31,11 @@ struct VisualEffectBackground: NSViewRepresentable {
     }
 }
 
-// @note footer menu button (toggles the floating menu box owned by ContentView)
-struct FooterMenuButton: View {
+// @note footer menu button + popup (Liquid Glass morph on macOS 26+)
+struct FooterMenuControl: View {
     @Binding var isPresented: Bool
-    
-    var body: some View {
-        Button(action: { isPresented.toggle() }) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-                .frame(width: 28, height: 28)
-                .floatingChipChrome(
-                    cornerRadius: LauncherChrome.chipCornerRadius,
-                    fillColor: Color.secondary.opacity(0.15),
-                    strokeColor: Color.clear
-                )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// @note floating footer menu box (version + settings), positioned by its parent
-struct FooterMenuBox: View {
     var onSettings: () -> Void
+    @Namespace private var footerMenuNamespace
     @Environment(\.colorScheme) var colorScheme
     
     private var menuBackgroundColor: Color {
@@ -67,6 +49,114 @@ struct FooterMenuBox: View {
             ? Color(nsColor: NSColor(white: 0.25, alpha: 1))
             : Color(nsColor: NSColor(white: 0.82, alpha: 1))
     }
+    
+    var body: some View {
+        Group {
+            if #available(macOS 26, *), LauncherChrome.usesLiquidGlass {
+                liquidGlassControl
+            } else {
+                legacyControl
+            }
+        }
+        .frame(width: 28, height: 28, alignment: .bottomLeading)
+    }
+    
+    // @note Liquid Glass morphing chip ↔ menu for macOS 26+
+    @available(macOS 26, *)
+    private var liquidGlassControl: some View {
+        GlassEffectContainer(spacing: 8) {
+            Button(action: { setPresented(!isPresented) }) {
+                footerMenuIcon
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.interactive(), in: Circle())
+            .glassEffectID("footerMenuChip", in: footerMenuNamespace)
+            .overlay(alignment: .topLeading) {
+                if isPresented {
+                    FooterMenuBoxContent(
+                        onSettings: {
+                            setPresented(false)
+                            onSettings()
+                        }
+                    )
+                    .frame(width: 220)
+                    .glassEffect(
+                        .regular,
+                        in: RoundedRectangle(cornerRadius: LauncherChrome.menuCornerRadius, style: .continuous)
+                    )
+                    .glassEffectID("footerMenuPanel", in: footerMenuNamespace)
+                    .glassEffectTransition(.matchedGeometry)
+                    .offset(y: -(footerMenuEstimatedHeight + 8))
+                }
+            }
+        }
+    }
+    
+    // @note Sequoia-era chip + menu with fade/scale
+    private var legacyControl: some View {
+        Button(action: { setPresented(!isPresented) }) {
+            footerMenuIcon
+                .floatingChipChrome(
+                    cornerRadius: LauncherChrome.chipCornerRadius,
+                    fillColor: Color.secondary.opacity(0.15),
+                    strokeColor: Color.clear,
+                    enableGlass: false
+                )
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .topLeading) {
+            if isPresented {
+                FooterMenuBoxContent(
+                    onSettings: {
+                        setPresented(false)
+                        onSettings()
+                    }
+                )
+                .frame(width: 220)
+                .floatingMenuChrome(
+                    cornerRadius: LauncherChrome.menuCornerRadius,
+                    fillColor: menuBackgroundColor,
+                    strokeColor: menuBorderColor
+                )
+                .offset(y: -(footerMenuEstimatedHeight + 8))
+                .transition(
+                    .opacity.combined(with: .scale(scale: 0.96, anchor: .bottomLeading))
+                )
+            }
+        }
+        .animation(.easeOut(duration: 0.18), value: isPresented)
+    }
+    
+    private var footerMenuIcon: some View {
+        Image(systemName: "magnifyingglass")
+            .font(.system(size: 12))
+            .foregroundColor(.secondary)
+            .frame(width: 28, height: 28)
+    }
+    
+    // @note approximate menu height for overlay placement above the chip
+    private var footerMenuEstimatedHeight: CGFloat { 86 }
+    
+    // @note open/close with Liquid Glass-aware animation
+    // @param visible whether the menu should be shown
+    private func setPresented(_ visible: Bool) {
+        guard isPresented != visible else { return }
+        if LauncherChrome.usesLiquidGlass {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                isPresented = visible
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.18)) {
+                isPresented = visible
+            }
+        }
+    }
+}
+
+// @note floating footer menu content (version + settings); chrome applied by parent
+struct FooterMenuBoxContent: View {
+    var onSettings: () -> Void
+    @Environment(\.colorScheme) var colorScheme
     
     private var menuRowHoverColor: Color {
         colorScheme == .dark
@@ -119,12 +209,6 @@ struct FooterMenuBox: View {
                 .padding(.vertical, 8)
             }
         }
-        .frame(width: 220)
-        .floatingMenuChrome(
-            cornerRadius: LauncherChrome.menuCornerRadius,
-            fillColor: menuBackgroundColor,
-            strokeColor: menuBorderColor
-        )
     }
 }
 
@@ -196,6 +280,7 @@ struct SearchFooterView: View {
     @Binding var showMenu: Bool
     var enableTransparency: Bool
     var actionText: String = "Open Application"
+    var onSettings: () -> Void
     @Environment(\.colorScheme) var colorScheme
     
     // @note semi-transparent overlay color above the blur (95% opacity)
@@ -214,7 +299,7 @@ struct SearchFooterView: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            FooterMenuButton(isPresented: $showMenu)
+            FooterMenuControl(isPresented: $showMenu, onSettings: onSettings)
             
             Spacer()
             
@@ -281,6 +366,8 @@ struct ContentView: View {
     @State private var showFooterMenu = false
     // @note clipboard type filter dropdown visibility
     @State private var showClipboardTypeMenu = false
+    // @note shared glass namespace for clipboard filter chip ↔ menu morph
+    @Namespace private var clipboardFilterNamespace
     @State private var mode: LauncherMode = .search
     @State private var emojiSections: [EmojiSectionData] = []
     @State private var emojiDisplayEntries: [EmojiEntry] = []
@@ -569,7 +656,11 @@ struct ContentView: View {
                     SearchFooterView(
                         showMenu: $showFooterMenu,
                         enableTransparency: settings.enableTransparency,
-                        actionText: footerActionText
+                        actionText: footerActionText,
+                        onSettings: {
+                            setFooterMenuVisible(false)
+                            openSettings()
+                        }
                     )
                 }
             }
@@ -587,7 +678,7 @@ struct ContentView: View {
                 Color.black.opacity(0.001)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        showFooterMenu = false
+                        setFooterMenuVisible(false)
                     }
             }
             
@@ -596,19 +687,8 @@ struct ContentView: View {
                 Color.black.opacity(0.001)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        showClipboardTypeMenu = false
+                        setClipboardTypeMenuVisible(false)
                     }
-            }
-            
-            // @note floating footer menu box, anchored bottom-left above the footer
-            if showFooterMenu {
-                FooterMenuBox(onSettings: {
-                    showFooterMenu = false
-                    openSettings()
-                })
-                .padding(.leading, 8)
-                .padding(.bottom, LauncherChrome.usesLiquidGlass ? 56 : 52)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             }
             
             if mode == .emoji {
@@ -1116,51 +1196,103 @@ struct ContentView: View {
     }
     
     // @note clipboard type filter custom dropdown (All Types / Text / Link / Image)
+    @ViewBuilder
     private var clipboardTypeFilter: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            Button(action: { showClipboardTypeMenu.toggle() }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "line.3.horizontal.decrease")
-                        .font(.system(size: 11, weight: .medium))
-                    Text(clipboardService.typeFilter?.displayName ?? "All Types")
-                        .font(.system(size: 12, weight: .medium))
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .semibold))
-                        .rotationEffect(.degrees(showClipboardTypeMenu ? 180 : 0))
+        if #available(macOS 26, *), LauncherChrome.usesLiquidGlass {
+            liquidGlassClipboardTypeFilter
+        } else {
+            legacyClipboardTypeFilter
+        }
+    }
+    
+    // @note Liquid Glass morphing chip + dropdown for macOS 26+
+    @available(macOS 26, *)
+    private var liquidGlassClipboardTypeFilter: some View {
+        GlassEffectContainer(spacing: 8) {
+            VStack(alignment: .trailing, spacing: 6) {
+                Button(action: {
+                    setClipboardTypeMenuVisible(!showClipboardTypeMenu)
+                }) {
+                    clipboardFilterLabel
                 }
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .floatingChipChrome(
-                    cornerRadius: LauncherChrome.chipCornerRadius,
-                    fillColor: clipboardFilterBackground,
-                    strokeColor: Color.secondary.opacity(0.18)
-                )
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: Capsule())
+                .glassEffectID("clipboardFilterChip", in: clipboardFilterNamespace)
+                .fixedSize()
+                
+                if showClipboardTypeMenu {
+                    clipboardTypeListContent
+                        .padding(6)
+                        .frame(width: 168)
+                        .glassEffect(
+                            .regular,
+                            in: RoundedRectangle(cornerRadius: LauncherChrome.menuCornerRadius, style: .continuous)
+                        )
+                        .glassEffectID("clipboardFilterMenu", in: clipboardFilterNamespace)
+                        .glassEffectTransition(.matchedGeometry)
+                }
+            }
+        }
+    }
+    
+    // @note Sequoia-era filter chip + dropdown with a light fade/scale
+    private var legacyClipboardTypeFilter: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            Button(action: {
+                setClipboardTypeMenuVisible(!showClipboardTypeMenu)
+            }) {
+                clipboardFilterLabel
+                    .floatingChipChrome(
+                        cornerRadius: LauncherChrome.chipCornerRadius,
+                        fillColor: clipboardFilterBackground,
+                        strokeColor: Color.secondary.opacity(0.18),
+                        enableGlass: false
+                    )
             }
             .buttonStyle(.plain)
             .fixedSize()
             
             if showClipboardTypeMenu {
-                clipboardTypeList
+                clipboardTypeListContent
+                    .padding(6)
+                    .frame(width: 168)
+                    .floatingMenuChrome(
+                        cornerRadius: LauncherChrome.menuCornerRadius,
+                        fillColor: dropdownBackgroundColor,
+                        strokeColor: dropdownBorderColor
+                    )
+                    .transition(
+                        .opacity.combined(with: .scale(scale: 0.96, anchor: .topTrailing))
+                    )
             }
         }
+        .animation(.easeOut(duration: 0.18), value: showClipboardTypeMenu)
     }
     
-    // @note dropdown list of type options
-    private var clipboardTypeList: some View {
+    // @note shared filter chip label (chevron rotates with open state)
+    private var clipboardFilterLabel: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 11, weight: .medium))
+            Text(clipboardService.typeFilter?.displayName ?? "All Types")
+                .font(.system(size: 12, weight: .medium))
+            Image(systemName: "chevron.down")
+                .font(.system(size: 9, weight: .semibold))
+                .rotationEffect(.degrees(showClipboardTypeMenu ? 180 : 0))
+        }
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+    }
+    
+    // @note dropdown rows without chrome (chrome applied by each filter path)
+    private var clipboardTypeListContent: some View {
         VStack(spacing: 2) {
             clipboardTypeRow("All Types", type: nil, icon: "square.grid.2x2")
             clipboardTypeRow("Text", type: .text, icon: "doc.text")
             clipboardTypeRow("Link", type: .url, icon: "link")
             clipboardTypeRow("Image", type: .image, icon: "photo")
         }
-        .padding(6)
-        .frame(width: 168)
-        .floatingMenuChrome(
-            cornerRadius: LauncherChrome.menuCornerRadius,
-            fillColor: dropdownBackgroundColor,
-            strokeColor: dropdownBorderColor
-        )
     }
     
     // @note a single type filter row
@@ -1171,7 +1303,37 @@ struct ContentView: View {
             isSelected: clipboardService.typeFilter == type
         ) {
             setClipboardTypeFilter(type)
-            showClipboardTypeMenu = false
+            setClipboardTypeMenuVisible(false)
+        }
+    }
+    
+    // @note open/close clipboard filter with Liquid Glass-aware animation
+    // @param visible whether the dropdown should be shown
+    private func setClipboardTypeMenuVisible(_ visible: Bool) {
+        guard showClipboardTypeMenu != visible else { return }
+        if LauncherChrome.usesLiquidGlass {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                showClipboardTypeMenu = visible
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.18)) {
+                showClipboardTypeMenu = visible
+            }
+        }
+    }
+    
+    // @note open/close footer menu with Liquid Glass-aware animation
+    // @param visible whether the menu should be shown
+    private func setFooterMenuVisible(_ visible: Bool) {
+        guard showFooterMenu != visible else { return }
+        if LauncherChrome.usesLiquidGlass {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                showFooterMenu = visible
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.18)) {
+                showFooterMenu = visible
+            }
         }
     }
     
