@@ -40,10 +40,11 @@ struct FooterMenuButton: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
-                .frame(width: 24, height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.secondary.opacity(0.15))
+                .frame(width: 28, height: 28)
+                .floatingChipChrome(
+                    cornerRadius: LauncherChrome.chipCornerRadius,
+                    fillColor: Color.secondary.opacity(0.15),
+                    strokeColor: Color.clear
                 )
         }
         .buttonStyle(.plain)
@@ -119,15 +120,11 @@ struct FooterMenuBox: View {
             }
         }
         .frame(width: 220)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(menuBackgroundColor)
+        .floatingMenuChrome(
+            cornerRadius: LauncherChrome.menuCornerRadius,
+            fillColor: menuBackgroundColor,
+            strokeColor: menuBorderColor
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(menuBorderColor, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 6)
     }
 }
 
@@ -184,7 +181,7 @@ private struct ClipboardTypeRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: LauncherChrome.chipCornerRadius, style: .continuous)
                     .fill(rowBackground)
             )
             .contentShape(Rectangle())
@@ -232,14 +229,23 @@ struct SearchFooterView: View {
                     .foregroundColor(.secondary)
                     .frame(width: 22, height: 20)
                     .background(
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous)
                             .fill(Color.secondary.opacity(0.15))
                     )
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(enableTransparency ? footerOverlayColor : footerSolidColor)
+        .padding(.top, LauncherChrome.footerTopPadding)
+        .padding(.bottom, LauncherChrome.footerBottomPadding)
+        .background(footerBackground)
+    }
+    
+    // @note softer footer wash on Liquid Glass; keep legacy overlay elsewhere
+    private var footerBackground: Color {
+        if LauncherChrome.usesLiquidGlass && enableTransparency {
+            return Color.secondary.opacity(colorScheme == .dark ? 0.08 : 0.06)
+        }
+        return enableTransparency ? footerOverlayColor : footerSolidColor
     }
 }
 
@@ -601,7 +607,7 @@ struct ContentView: View {
                     openSettings()
                 })
                 .padding(.leading, 8)
-                .padding(.bottom, 52)
+                .padding(.bottom, LauncherChrome.usesLiquidGlass ? 56 : 52)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             }
             
@@ -619,25 +625,27 @@ struct ContentView: View {
         }
         .frame(width: LauncherLayout.panelWidth, height: panelHeight, alignment: .top)
         .background {
-            if settings.enableTransparency {
-                ZStack {
-                    VisualEffectBackground(
-                        material: .hudWindow,
-                        blendingMode: .behindWindow,
-                        cornerRadius: 12,
-                        opacity: 1.0
-                    )
-                    
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(backgroundOverlayColor)
-                }
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(solidBackgroundColor)
-            }
+            LauncherBackground(
+                enableTransparency: settings.enableTransparency,
+                cornerRadius: LauncherChrome.panelCornerRadius,
+                solidColor: solidBackgroundColor,
+                overlayColor: backgroundOverlayColor,
+                material: .hudWindow
+            )
         }
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        .clipShape(RoundedRectangle(cornerRadius: LauncherChrome.panelCornerRadius, style: .continuous))
+        .shadow(
+            color: .black.opacity(LauncherChrome.panelShadowOpacity),
+            radius: LauncherChrome.panelShadowRadius,
+            x: 0,
+            y: LauncherChrome.panelShadowY
+        )
+        .onAppear {
+            publishPreferredPanelHeight()
+        }
+        .onChange(of: panelHeight) { _ in
+            publishPreferredPanelHeight()
+        }
         .onChange(of: searchText) { newValue in
             // @note limit input length to prevent performance issues
             let maxInputLength = 100
@@ -700,6 +708,10 @@ struct ContentView: View {
                 searchService.search(query: "")
                 selectedIndex = 0
             }
+            // @note re-publish after show so the window recenters around loaded results
+            DispatchQueue.main.async {
+                publishPreferredPanelHeight()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .saciWindowDidHide)) { _ in
             // @note clear search when window is hidden
@@ -756,12 +768,28 @@ struct ContentView: View {
         }
     }
     
-    // @note fixed height only for expanded modes
-    private var panelHeight: CGFloat? {
+    // @note fixed height for expanded modes; search mode matches live content
+    private var panelHeight: CGFloat {
         switch mode {
-        case .search: return nil
-        case .emoji, .clipboard: return expandedPanelHeight
+        case .search:
+            return LauncherLayout.searchPanelHeight(
+                resultCount: currentResults.count,
+                hasCalculator: calculatorResult != nil,
+                showFooter: showFooter,
+                showEmptyState: currentResults.isEmpty && !searchText.isEmpty && calculatorResult == nil
+            )
+        case .emoji, .clipboard:
+            return expandedPanelHeight
         }
+    }
+    
+    // @note publish preferred height so the NSPanel frame stays centered around content
+    private func publishPreferredPanelHeight() {
+        NotificationCenter.default.post(
+            name: .saciPanelPreferredHeightDidChange,
+            object: nil,
+            userInfo: ["height": NSNumber(value: Double(panelHeight))]
+        )
     }
     
     // @note current selected result if valid
@@ -797,13 +825,10 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
             .frame(width: emojiDropdownWidth, height: emojiDropdownHeight)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.secondary.opacity(0.12))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+            .floatingChipChrome(
+                cornerRadius: LauncherChrome.chipCornerRadius,
+                fillColor: Color.secondary.opacity(0.12),
+                strokeColor: Color.secondary.opacity(0.3)
             )
         }
         .buttonStyle(.plain)
@@ -820,13 +845,11 @@ struct ContentView: View {
             }
         )
         .frame(width: 220, height: 260)
-        .background(dropdownBackgroundColor)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(dropdownBorderColor, lineWidth: 1)
+        .floatingMenuChrome(
+            cornerRadius: LauncherChrome.menuCornerRadius,
+            fillColor: dropdownBackgroundColor,
+            strokeColor: dropdownBorderColor
         )
-        .cornerRadius(8)
-        .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 4)
     }
     
     // @note emoji category dropdown container
@@ -1108,13 +1131,10 @@ struct ContentView: View {
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
-                .background(
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(clipboardFilterBackground)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+                .floatingChipChrome(
+                    cornerRadius: LauncherChrome.chipCornerRadius,
+                    fillColor: clipboardFilterBackground,
+                    strokeColor: Color.secondary.opacity(0.18)
                 )
             }
             .buttonStyle(.plain)
@@ -1136,15 +1156,11 @@ struct ContentView: View {
         }
         .padding(6)
         .frame(width: 168)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(dropdownBackgroundColor)
+        .floatingMenuChrome(
+            cornerRadius: LauncherChrome.menuCornerRadius,
+            fillColor: dropdownBackgroundColor,
+            strokeColor: dropdownBorderColor
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(dropdownBorderColor, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
     }
     
     // @note a single type filter row

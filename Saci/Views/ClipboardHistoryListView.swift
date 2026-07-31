@@ -71,7 +71,10 @@ struct ClipboardHistoryView: View {
     @Environment(\.colorScheme) var colorScheme
     
     private var selectionColor: Color {
-        colorScheme == .dark
+        if LauncherChrome.usesLiquidGlass {
+            return Color.secondary.opacity(colorScheme == .dark ? 0.22 : 0.16)
+        }
+        return colorScheme == .dark
             ? Color(nsColor: NSColor(white: 0.22, alpha: 1))
             : Color(nsColor: NSColor(white: 0.86, alpha: 1))
     }
@@ -218,7 +221,7 @@ struct ClipboardHistoryView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
         .background(index == selectedIndex ? selectionColor : Color.clear)
-        .cornerRadius(8)
+        .cornerRadius(LauncherChrome.rowCornerRadius)
         .contentShape(Rectangle())
         .onTapGesture {
             selectedIndex = index
@@ -233,14 +236,14 @@ struct ClipboardHistoryView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 32, height: 24)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .clipShape(RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous))
         } else {
             Image(systemName: entry.type.iconName)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(iconTint(entry.type))
                 .frame(width: 32, height: 24)
                 .background(
-                    RoundedRectangle(cornerRadius: 5)
+                    RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous)
                         .fill(iconTint(entry.type).opacity(0.18))
                 )
         }
@@ -395,7 +398,7 @@ struct ClipboardHistoryView: View {
                         .frame(minWidth: 28, minHeight: 18)
                         .padding(.horizontal, 3)
                         .background(
-                            RoundedRectangle(cornerRadius: 4)
+                            RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous)
                                 .fill(Color.secondary.opacity(0.15))
                         )
                 }
@@ -403,7 +406,8 @@ struct ClipboardHistoryView: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.top, LauncherChrome.footerTopPadding)
+        .padding(.bottom, LauncherChrome.footerBottomPadding)
     }
     
     private func footerHint(label: String, key: String, action: @escaping () -> Void) -> some View {
@@ -418,7 +422,7 @@ struct ClipboardHistoryView: View {
                     .frame(minWidth: 20, minHeight: 18)
                     .padding(.horizontal, 3)
                     .background(
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous)
                             .fill(Color.secondary.opacity(0.15))
                     )
             }
@@ -440,15 +444,11 @@ struct ClipboardHistoryView: View {
         }
         .padding(6)
         .frame(width: 270)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(actionsBoxColor)
+        .floatingMenuChrome(
+            cornerRadius: LauncherChrome.menuCornerRadius,
+            fillColor: actionsBoxColor,
+            strokeColor: dividerColor
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(dividerColor, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 6)
     }
     
     private func actionRow(_ action: ClipboardAction, isSelected: Bool, isPinned: Bool) -> some View {
@@ -470,7 +470,7 @@ struct ClipboardHistoryView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 7)
+            RoundedRectangle(cornerRadius: LauncherChrome.rowCornerRadius, style: .continuous)
                 .fill(isSelected ? actionHighlightColor : Color.clear)
         )
         .contentShape(Rectangle())

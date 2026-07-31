@@ -44,6 +44,57 @@ struct LauncherLayout {
     static let panelWidth: CGFloat = 680
     static let compactHeight: CGFloat = 100
     static let expandedHeight: CGFloat = 460
+    static let searchBarHeight: CGFloat = 56
+    // @note divider + footer bar; slightly taller on Liquid Glass for rounded-corner clearance
+    static var footerBlockHeight: CGFloat {
+        LauncherChrome.usesLiquidGlass ? 46 : 45
+    }
+    static let emptyStateHeight: CGFloat = 61
+    static let calculatorSectionHeight: CGFloat = 108
+    static let resultRowHeight: CGFloat = 40
+    static let resultRowSpacing: CGFloat = 4
+    static let resultListVerticalPadding: CGFloat = 8
+    static let maxVisibleResultRows = 9
+
+    // @note bounded height for the visible results list
+    // @param count number of results to show
+    static func resultsListHeight(count: Int) -> CGFloat {
+        let visible = min(count, maxVisibleResultRows)
+        guard visible > 0 else { return 0 }
+        return CGFloat(visible) * resultRowHeight
+            + CGFloat(visible - 1) * resultRowSpacing
+            + resultListVerticalPadding * 2
+    }
+
+    // @note full search-mode panel height matching SwiftUI content
+    // @param resultCount app/command result rows
+    // @param hasCalculator whether calculator section is visible
+    // @param showFooter whether footer bar is visible
+    // @param showEmptyState whether empty-query message is visible
+    static func searchPanelHeight(
+        resultCount: Int,
+        hasCalculator: Bool,
+        showFooter: Bool,
+        showEmptyState: Bool
+    ) -> CGFloat {
+        var height = searchBarHeight
+
+        if hasCalculator {
+            height += 1 + calculatorSectionHeight
+        }
+
+        if resultCount > 0 {
+            height += 1 + resultsListHeight(count: resultCount)
+        } else if showEmptyState {
+            height += 1 + emptyStateHeight
+        }
+
+        if showFooter {
+            height += footerBlockHeight
+        }
+
+        return max(height, compactHeight)
+    }
 
     // @note center the launcher and keep it within the usable screen area
     // @param visibleFrame usable screen frame excluding the menu bar and Dock
@@ -181,6 +232,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             self,
             selector: #selector(clipboardHistoryDidExit),
             name: .clipboardHistoryDidExit,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(panelPreferredHeightDidChange(_:)),
+            name: .saciPanelPreferredHeightDidChange,
             object: nil
         )
         
@@ -535,16 +593,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     private func showPanel() {
         guard let panel = mainPanel else { return }
 
-        // @note notify that panel will show (for state reset)
+        // @note notify that panel will show (for state reset / result reload)
         NotificationCenter.default.post(name: .saciWindowWillShow, object: nil)
 
-        if let screen = pointerScreen {
-            panel.setFrame(launcherFrame(on: screen, height: panelHeight), display: false)
-        } else {
-            panel.center()
-        }
-
         panel.makeKeyAndOrderFront(nil)
+
+        // @note place after ordering front; follow-up pass catches async SwiftUI height updates
+        recenterVisiblePanel(animated: false)
+        DispatchQueue.main.async { [weak self] in
+            self?.recenterVisiblePanel(animated: false)
+        }
     }
     
     // @note hide the main panel (focus automatically returns to previous app)
@@ -557,34 +615,69 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
     // @note resize panel for emoji library
     @objc private func emojiLibraryDidEnter() {
         panelHeight = LauncherLayout.expandedHeight
-        resizePanel(height: panelHeight)
+        resizePanel(height: panelHeight, animated: true)
     }
     
     // @note resize panel back to default
     @objc private func emojiLibraryDidExit() {
         panelHeight = LauncherLayout.compactHeight
-        resizePanel(height: panelHeight)
+        resizePanel(height: panelHeight, animated: true)
     }
     
     // @note resize panel for clipboard history
     @objc private func clipboardHistoryDidEnter() {
         panelHeight = LauncherLayout.expandedHeight
-        resizePanel(height: panelHeight)
+        resizePanel(height: panelHeight, animated: true)
     }
     
     // @note resize panel back to default
     @objc private func clipboardHistoryDidExit() {
         panelHeight = LauncherLayout.compactHeight
-        resizePanel(height: panelHeight)
+        resizePanel(height: panelHeight, animated: true)
     }
     
     // @note resize panel while preserving its centered screen position
     // @param height desired panel height
-    private func resizePanel(height: CGFloat) {
-        guard let panel = mainPanel,
-              let screen = panel.screen ?? pointerScreen else { return }
-        let newFrame = launcherFrame(on: screen, height: height)
-        panel.setFrame(newFrame, display: true, animate: true)
+    // @param animated whether to animate the frame change
+    private func resizePanel(height: CGFloat, animated: Bool = true) {
+        panelHeight = height
+        guard let panel = mainPanel, panel.isVisible else { return }
+        recenterVisiblePanel(animated: animated)
+    }
+    
+    // @note apply current panelHeight as a centered frame on the pointer's screen
+    // @param animated whether to animate the frame change
+    private func recenterVisiblePanel(animated: Bool) {
+        guard let panel = mainPanel, panel.isVisible,
+              let screen = pointerScreen ?? panel.screen else { return }
+        let newFrame = launcherFrame(on: screen, height: panelHeight)
+        // @note skip no-op updates to avoid flicker
+        if panel.frame.size.width == newFrame.size.width,
+           panel.frame.size.height == newFrame.size.height,
+           abs(panel.frame.origin.x - newFrame.origin.x) < 0.5,
+           abs(panel.frame.origin.y - newFrame.origin.y) < 0.5 {
+            return
+        }
+        panel.setFrame(newFrame, display: true, animate: animated)
+    }
+    
+    // @note sync window frame to SwiftUI-reported content height and keep it centered
+    // @param notification carries preferred height in userInfo["height"] (NSNumber-safe)
+    @objc private func panelPreferredHeightDidChange(_ notification: Notification) {
+        guard let raw = notification.userInfo?["height"] else { return }
+        let height: CGFloat
+        if let value = raw as? CGFloat {
+            height = value
+        } else if let number = raw as? NSNumber {
+            height = CGFloat(truncating: number)
+        } else {
+            return
+        }
+        
+        let clamped = max(height, LauncherLayout.compactHeight)
+        panelHeight = clamped
+        guard mainPanel?.isVisible == true else { return }
+        recenterVisiblePanel(animated: false)
     }
     
     // @note toggle from menu item
@@ -655,6 +748,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
 extension Notification.Name {
     static let saciWindowDidHide = Notification.Name("saciWindowDidHide")
     static let saciWindowWillShow = Notification.Name("saciWindowWillShow")
+    static let saciPanelPreferredHeightDidChange = Notification.Name("saciPanelPreferredHeightDidChange")
     static let emojiLibraryRequested = Notification.Name("emojiLibraryRequested")
     static let emojiLibraryDidEnter = Notification.Name("emojiLibraryDidEnter")
     static let emojiLibraryDidExit = Notification.Name("emojiLibraryDidExit")

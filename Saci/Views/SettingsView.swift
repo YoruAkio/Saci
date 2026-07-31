@@ -49,7 +49,7 @@ struct SettingsRow<Content: View>: View {
     }
 }
 
-// @note visual effect background for settings window
+// @note visual effect background for settings window (legacy path retained for previews/tools)
 struct SettingsVisualEffectBackground: NSViewRepresentable {
     var material: NSVisualEffectView.Material
     var blendingMode: NSVisualEffectView.BlendingMode
@@ -96,14 +96,7 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            // @note transparent background
-            if settings.enableTransparency {
-                SettingsVisualEffectBackground(
-                    material: .sidebar,
-                    blendingMode: .behindWindow
-                )
-                .ignoresSafeArea()
-            }
+            SettingsWindowBackground(enableTransparency: settings.enableTransparency)
             
             VStack(spacing: 0) {
                 // @note tab content
@@ -192,8 +185,8 @@ struct SettingsView: View {
                 }
             }
             
-            // @note transparency toggle
-            SettingsRow("Transparency:") {
+            // @note transparency / glass toggle
+            SettingsRow(LauncherChrome.usesLiquidGlass ? "Glass:" : "Transparency:") {
                 HStack(spacing: 8) {
                     Toggle("", isOn: $enableTransparency)
                         .labelsHidden()
@@ -202,7 +195,9 @@ struct SettingsView: View {
                             settings.enableTransparency = newValue
                         }
                     
-                    Text("Enable window transparency")
+                    Text(LauncherChrome.usesLiquidGlass
+                         ? "Enable Liquid Glass backgrounds"
+                         : "Enable window transparency")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -210,7 +205,9 @@ struct SettingsView: View {
             
             // @note description
             SettingsRow("") {
-                Text("Transparency adds a blur effect behind windows. Disable for solid backgrounds.")
+                Text(LauncherChrome.usesLiquidGlass
+                     ? "Glass uses the system Liquid Glass material. Disable for solid backgrounds."
+                     : "Transparency adds a blur effect behind windows. Disable for solid backgrounds.")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

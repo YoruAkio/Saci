@@ -99,7 +99,7 @@ private struct EmojiCellView: View {
         }
         .frame(width: 72, height: 56)
         .background(isCopied ? copiedColor : (isHovered ? hoverColor : Color.clear))
-        .cornerRadius(8)
+        .cornerRadius(LauncherChrome.rowCornerRadius)
         .onHover { hovering in
             isHovered = hovering
         }

@@ -11,28 +11,16 @@ struct ResultsListView: View {
     @Binding var selectedIndex: Int
     var onSelect: (SearchResult) -> Void
     
-    // @note fixed row metrics so the visible height stays deterministic
-    private let rowHeight: CGFloat = 40
-    private let rowSpacing: CGFloat = 4
-    private let verticalPadding: CGFloat = 8
-    
-    // @note max rows visible before the list scrolls (the list itself is uncapped)
-    private let maxVisibleRows = 9
-    
     // @note bounded height for the visible area; anything beyond scrolls
     private var listHeight: CGFloat {
-        let visible = min(results.count, maxVisibleRows)
-        guard visible > 0 else { return 0 }
-        return CGFloat(visible) * rowHeight
-            + CGFloat(visible - 1) * rowSpacing
-            + verticalPadding * 2
+        LauncherLayout.resultsListHeight(count: results.count)
     }
     
     var body: some View {
         if !results.isEmpty {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: rowSpacing) {
+                    LazyVStack(spacing: LauncherLayout.resultRowSpacing) {
                         // @note identity is the stable result id for both ForEach and .id() so
                         // @note rows never get matched by position and show stale content
                         ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
@@ -41,7 +29,7 @@ struct ResultsListView: View {
                                 isSelected: index == selectedIndex,
                                 index: index
                             )
-                            .frame(height: rowHeight)
+                            .frame(height: LauncherLayout.resultRowHeight)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 onSelect(result)
@@ -49,7 +37,7 @@ struct ResultsListView: View {
                             .id(result.id)
                         }
                     }
-                    .padding(.vertical, verticalPadding)
+                    .padding(.vertical, LauncherLayout.resultListVerticalPadding)
                     .padding(.horizontal, 8)
                 }
                 .frame(height: listHeight)

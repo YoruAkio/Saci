@@ -98,16 +98,10 @@ struct CalculatorResultView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(containerColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(
-                    isSelected ? Color.accentColor.opacity(0.5) : Color.clear,
-                    lineWidth: 2
-                )
+        .launcherCardChrome(
+            cornerRadius: LauncherChrome.cardCornerRadius,
+            fillColor: containerColor,
+            selected: isSelected
         )
     }
 }
@@ -125,7 +119,7 @@ private struct CopiedBadge: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous)
                 .fill(Color.green.opacity(0.15))
         )
     }
@@ -144,7 +138,7 @@ private struct CopyHintBadge: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous)
                 .fill(Color.secondary.opacity(0.15))
         )
     }

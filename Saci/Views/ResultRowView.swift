@@ -36,7 +36,10 @@ private struct ResultRowContent: View {
     
     // @note selection background color based on theme
     private var selectionColor: Color {
-        colorScheme == .dark
+        if LauncherChrome.usesLiquidGlass {
+            return Color.secondary.opacity(colorScheme == .dark ? 0.22 : 0.16)
+        }
+        return colorScheme == .dark
             ? Color(nsColor: NSColor(white: 0.25, alpha: 1))
             : Color(nsColor: NSColor(white: 0.85, alpha: 1))
     }
@@ -71,7 +74,7 @@ private struct ResultRowContent: View {
                 .frame(minWidth: 28, minHeight: 20)
                 .padding(.horizontal, 4)
                 .background(
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: LauncherChrome.badgeCornerRadius, style: .continuous)
                         .fill(Color.secondary.opacity(0.15))
                 )
             }
@@ -79,7 +82,7 @@ private struct ResultRowContent: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(isSelected ? selectionColor : Color.clear)
-        .cornerRadius(6)
+        .cornerRadius(LauncherChrome.rowCornerRadius)
         .onAppear {
             loadIconIfNeeded()
         }
@@ -103,7 +106,7 @@ private struct ResultRowContent: View {
                 .foregroundColor(.secondary)
                 .frame(width: 24, height: 24)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: LauncherChrome.chipCornerRadius, style: .continuous)
                         .fill(Color.secondary.opacity(0.15))
                 )
         } else if let loadedIcon = icon {

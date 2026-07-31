@@ -17,6 +17,7 @@
 - **Native Performance** - Built with pure Swift/SwiftUI, no external dependencies
 - **Menu Bar App** - Lives in your menu bar, always ready when you need it
 - **Customizable Appearance** - Light, dark, or system theme with optional transparency effects
+- **Liquid Glass (macOS 26+)** - Uses system Liquid Glass materials and rounder chrome on macOS 26+; earlier versions keep the classic blur/solid look
 - **Keyboard Navigation** - Full keyboard support with arrow keys and Enter to launch
 
 ## Requirements
