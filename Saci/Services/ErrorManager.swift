@@ -181,10 +181,15 @@ class ErrorManager: ObservableObject {
     
     // @note dismiss the error window
     func dismiss() {
-        showErrorWindow = false
-        currentError = nil
+        clearError()
         // @note post notification to close the window
         NotificationCenter.default.post(name: .errorWindowShouldClose, object: nil)
+    }
+    
+    // @note clear error state without closing the window (used from windowWillClose)
+    func clearError() {
+        showErrorWindow = false
+        currentError = nil
     }
 }
 

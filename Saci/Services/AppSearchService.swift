@@ -277,10 +277,28 @@ class AppSearchService: ObservableObject {
         let config = NSWorkspace.OpenConfiguration()
         
         NSWorkspace.shared.openApplication(at: url, configuration: config) { _, error in
-            if let error = error {
-                ErrorManager.shared.report(.appLaunchFailed(path: path, underlyingError: error))
-            }
+            guard let error = error else { return }
+            // @note ignore Gatekeeper / open cancel (userCanceledErr); not a real failure
+            if Self.isUserCancelledLaunch(error) { return }
+            ErrorManager.shared.report(.appLaunchFailed(path: path, underlyingError: error))
         }
+    }
+    
+    // @note true when the user cancelled launch (Gatekeeper Done, quarantine prompt, etc.)
+    // @param error error from NSWorkspace.openApplication
+    private static func isUserCancelledLaunch(_ error: Error) -> Bool {
+        var current: NSError? = error as NSError
+        while let nsError = current {
+            // @note Carbon userCanceledErr (-128) or Cocoa NSUserCancelledError (3072)
+            if nsError.domain == NSOSStatusErrorDomain && nsError.code == -128 {
+                return true
+            }
+            if nsError.domain == NSCocoaErrorDomain && nsError.code == NSUserCancelledError {
+                return true
+            }
+            current = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+        return false
     }
     
     // @note clear search results

@@ -567,8 +567,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDele
             // @note hide dock icon directly since window is still visible at this point
             NSApp.setActivationPolicy(.accessory)
         } else if closingWindow == errorWindow {
-            // @note reset error manager state when error window closes
-            ErrorManager.shared.dismiss()
+            // @note reset state only; dismiss() would re-enter close() and crash
+            ErrorManager.shared.clearError()
         }
     }
     
